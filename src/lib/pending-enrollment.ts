@@ -12,7 +12,7 @@ export function savePendingEnrollment(course: { id: number; title?: string }): v
   const entry: PendingEnrollment = {
     course_id: course.id,
     course_title: course.title || '',
-    redirect_after_auth: `/payment/${course.id}`,
+    redirect_after_auth: `/student-information?courseId=${course.id}`,
     timestamp: Date.now(),
   }
   sessionStorage.setItem(PENDING_KEY, JSON.stringify(entry))

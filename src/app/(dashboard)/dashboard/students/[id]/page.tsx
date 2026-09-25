@@ -1120,7 +1120,9 @@ export default function StudentProfilePage() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-[11px] text-[#536078]">
                 <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{s.email}</span>
                 {s.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{s.phone}</span>}
-                {(s.city || s.division) && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{[s.city, s.division].filter(Boolean).join(', ')}</span>}
+                {(s.city || s.division || s.country) && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{[s.city, s.division, s.country].filter(Boolean).join(', ')}</span>}
+                {(s.institution || s.student_profile?.education_level) && <span className="flex items-center gap-1"><GraduationCap className="w-3 h-3" />{[s.institution, s.student_profile?.education_level].filter(Boolean).join(' · ')}</span>}
+                {(s.student_profile?.occupation || s.student_profile?.postal_code) && <span className="flex items-center gap-1"><Target className="w-3 h-3" />{[s.student_profile?.occupation, s.student_profile?.postal_code].filter(Boolean).join(' · ')}</span>}
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Joined {formatDate(s.created_at)}</span>
                 <span className="flex items-center gap-1"><Activity className="w-3 h-3" />Last active {s.last_activity ? formatDateRelative(s.last_activity) : 'never'}</span>
               </div>

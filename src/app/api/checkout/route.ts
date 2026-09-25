@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      gatewayUrl: `/payment/${courseId}`,
+      gatewayUrl: `/student-information?courseId=${courseId}`,
       user: data.user || null,
       enrollment: data.enrollment || null,
       course: data.course || null,

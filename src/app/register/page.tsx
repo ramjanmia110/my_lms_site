@@ -286,7 +286,7 @@ export default function RegisterPage() {
 
       toast.success('Registration successful!')
       const courseId = data?.course?.id || 1
-      setTimeout(() => router.push(`/payment/${courseId}`), 1500)
+      setTimeout(() => router.push(`/student-information?courseId=${courseId}`), 1500)
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Registration failed'
       const fieldErrors = err?.response?.data?.errors

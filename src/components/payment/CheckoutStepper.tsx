@@ -3,18 +3,24 @@
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const STEPS = [
+const DEFAULT_STEPS = [
   { n: 1, label: 'Student Info' },
   { n: 2, label: 'Order Review' },
   { n: 3, label: 'Payment' },
   { n: 4, label: 'Success' },
 ]
 
-export default function CheckoutStepper({ current }: { current: number }) {
+export default function CheckoutStepper({
+  current,
+  steps = DEFAULT_STEPS,
+}: {
+  current: number
+  steps?: { n: number; label: string }[]
+}) {
   return (
     <nav aria-label="Checkout progress" className="w-full">
       <ol className="flex items-center">
-        {STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const status = step.n < current ? 'done' : step.n === current ? 'active' : 'upcoming'
           return (
             <li key={step.n} className="flex items-center flex-1 last:flex-none">
@@ -39,7 +45,7 @@ export default function CheckoutStepper({ current }: { current: number }) {
                   {step.label}
                 </span>
               </div>
-              {i < STEPS.length - 1 && (
+              {i < steps.length - 1 && (
                 <div className="relative flex-1 mx-2 sm:mx-4 border-t border-dashed border-[#DCD8EF]">
                   <div
                     className={cn(

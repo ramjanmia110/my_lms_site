@@ -7,8 +7,9 @@ import {
   BookOpen, Calendar, Eye, User, Copy, Check, ArrowLeft, ArrowRight,
   Loader2, Tag, Share2, Clock,
 } from 'lucide-react'
-import { PublicNavbar } from '@/components/public/PublicNavbar'
-import { LandingFooter } from '@/components/public/LandingFooter'
+import { LandingHeader } from '@/components/landing/LandingHeader'
+import { LandingSiteFooter } from '@/components/landing/LandingSiteFooter'
+import { ScrollToTop } from '@/components/ui/scroll-to-top'
 import { AuthorAvatar } from '@/components/blog/AuthorAvatar'
 import { blogAPI } from '@/lib/api'
 import { sanitizeHtml, htmlToPlainText } from '@/lib/content'
@@ -82,11 +83,12 @@ export default function BlogPostPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white font-sans">
-        <PublicNavbar />
+        <LandingHeader />
+        <div aria-hidden className="h-[100px] lg:h-[124px]" />
         <div className="flex items-center justify-center py-32">
           <Loader2 className="w-6 h-6 animate-spin text-[#6D3DF5]" />
         </div>
-        <LandingFooter />
+        <LandingSiteFooter />
       </div>
     )
   }
@@ -94,7 +96,8 @@ export default function BlogPostPage() {
   if (notFound || !post) {
     return (
       <div className="min-h-screen bg-white font-sans">
-        <PublicNavbar />
+        <LandingHeader />
+        <div aria-hidden className="h-[100px] lg:h-[124px]" />
         <div className="max-w-lg mx-auto text-center py-24 sm:py-32 px-4">
           <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-[#0F1B3D]">Article not found</h1>
@@ -103,7 +106,7 @@ export default function BlogPostPage() {
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Blog
           </Link>
         </div>
-        <LandingFooter />
+        <LandingSiteFooter />
       </div>
     )
   }
@@ -113,7 +116,8 @@ export default function BlogPostPage() {
 
   return (
     <div className="min-h-screen bg-white font-sans">
-      <PublicNavbar />
+      <LandingHeader />
+      <div aria-hidden className="h-[100px] lg:h-[124px]" />
 
       {/* Cover */}
       <div className="relative h-[200px] sm:h-[280px] lg:h-[340px] overflow-hidden bg-[#F3EEFF]">
@@ -260,7 +264,8 @@ export default function BlogPostPage() {
         </div>
       </section>
 
-      <LandingFooter />
+      <LandingSiteFooter />
+      <ScrollToTop />
     </div>
   )
 }

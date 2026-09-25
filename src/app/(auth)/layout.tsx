@@ -1,11 +1,19 @@
+'use client'
+
+import { LayoutGroup, MotionConfig } from 'framer-motion'
+
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#F8F6FF]">
-      {children}
-    </div>
+    <MotionConfig reducedMotion="user">
+      <LayoutGroup id="auth-routes">
+        <div className="relative min-h-screen overflow-hidden bg-white font-mona">
+          {children}
+        </div>
+      </LayoutGroup>
+    </MotionConfig>
   )
 }

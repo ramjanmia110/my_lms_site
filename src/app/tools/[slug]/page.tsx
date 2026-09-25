@@ -4,8 +4,9 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Wrench, ArrowLeft, Loader2, Home, Layers } from 'lucide-react'
-import { PublicNavbar } from '@/components/public/PublicNavbar'
-import { LandingFooter } from '@/components/public/LandingFooter'
+import { LandingHeader } from '@/components/landing/LandingHeader'
+import { LandingSiteFooter } from '@/components/landing/LandingSiteFooter'
+import { ScrollToTop } from '@/components/ui/scroll-to-top'
 import { SandboxedToolViewer } from '@/components/tools/SandboxedToolViewer'
 import { toolsAPI } from '@/lib/api'
 
@@ -81,11 +82,12 @@ export default function ToolDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white font-sans">
-        <PublicNavbar />
+        <LandingHeader />
+        <div aria-hidden className="h-[100px] lg:h-[124px]" />
         <div className="flex items-center justify-center py-32">
           <Loader2 className="w-6 h-6 animate-spin text-[#6D3DF5]" />
         </div>
-        <LandingFooter />
+        <LandingSiteFooter />
       </div>
     )
   }
@@ -93,7 +95,8 @@ export default function ToolDetailPage() {
   if (notFound || !tool) {
     return (
       <div className="min-h-screen bg-white font-sans">
-        <PublicNavbar />
+        <LandingHeader />
+        <div aria-hidden className="h-[100px] lg:h-[124px]" />
         <div className="max-w-lg mx-auto text-center py-32 px-4">
           <Wrench className="w-10 h-10 text-slate-300 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-[#0F1B3D]">Tool not found</h1>
@@ -108,10 +111,11 @@ export default function ToolDetailPage() {
 
   return (
     <div className="bg-white font-sans">
-      <PublicNavbar />
+      <LandingHeader />
+      <div aria-hidden className="h-[100px] lg:h-[124px]" />
 
-      {/* Tool -- exactly one viewport height, scrollable inside with hidden scrollbar */}
-      <div className="relative h-screen">
+      {/* Tool -- exactly one viewport height (minus fixed header), scrollable inside with hidden scrollbar */}
+      <div className="relative h-[calc(100vh-100px)] lg:h-[calc(100vh-124px)]">
         {/* Breadcrumb -- floating path only */}
         <div className="absolute top-0 inset-x-0 z-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-10 flex items-center gap-2">
@@ -156,7 +160,8 @@ export default function ToolDetailPage() {
         </div>
       )}
 
-      <LandingFooter />
+      <LandingSiteFooter />
+      <ScrollToTop />
     </div>
   )
 }

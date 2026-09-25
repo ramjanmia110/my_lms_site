@@ -144,7 +144,7 @@ export default function CourseDetailsPage() {
     if (!course) return
     saveCourseSnapshot({ id: course.id, title: course.title, price })
     savePendingEnrollment({ id: course.id, title: course.title })
-    router.push(`/payment/${course.id}`)
+    router.push(`/student-information?courseId=${course.id}`)
   }
 
   const handleDownloadSyllabus = () => {

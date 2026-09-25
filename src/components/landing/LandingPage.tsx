@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo, type ReactNode } from 'react'
+import { useState, useEffect, useRef, useMemo, Fragment, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion, AnimatePresence, useInView, useReducedMotion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { motion, AnimatePresence, useInView, useReducedMotion, useMotionValue, useSpring, useTransform, useScroll, animate } from 'framer-motion'
+import type { MotionValue } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useAuth } from '@/hooks/useAuth'
@@ -29,6 +30,8 @@ import {
   ChevronDown, MoreVertical, Pencil, Upload, FilterX, RefreshCw, Check,
   Radio, MessageSquare, UserCheck, GitFork, Video, Laptop, Pause, Volume, Maximize,
   Search, LayoutList, ArrowDownWideNarrow, SlidersHorizontal,
+  Lightbulb, FileText, ArrowUpRight, UserPlus, PlayCircle,
+  Crown,
   type LucideIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -37,6 +40,8 @@ import { cn } from '@/lib/utils'
 import EnrollmentModal from '@/components/landing/EnrollmentModal'
 import { coursesAPI } from '@/lib/api'
 import { ScrollToTop } from '@/components/ui/scroll-to-top'
+import Lenis from 'lenis'
+import 'lenis/dist/lenis.css'
 import { savePendingEnrollment, saveCourseSnapshot } from '@/lib/pending-enrollment'
 import { courses, toSlug, hoursToMonths } from '@/lib/course-catalog'
 
@@ -103,9 +108,9 @@ const footerCtaFeatures: {
   title: string
   desc: string
 }[] = [
-  { icon: BookOpen, accent: 'text-[#A78BFA] bg-[#A78BFA]/10 ring-[#A78BFA]/25', title: 'Learn', desc: 'Access premium courses and expert guidance.' },
-  { icon: Wallet, accent: 'text-[#34D399] bg-[#34D399]/10 ring-[#34D399]/25', title: 'Earn', desc: 'Complete tasks, projects, and earn real income.' },
-  { icon: Users, accent: 'text-[#60A5FA] bg-[#60A5FA]/10 ring-[#60A5FA]/25', title: 'Grow Together', desc: 'Join a supportive community and achieve more.' },
+  { icon: BookOpen, accent: 'text-[#F8B681] bg-[#E07B22]/10 ring-[#E07B22]/25', title: 'Learn', desc: 'Access premium courses and expert guidance.' },
+  { icon: Wallet, accent: 'text-[#7BD6A9] bg-[#2E7D5B]/15 ring-[#2E7D5B]/40', title: 'Earn', desc: 'Complete tasks, projects, and earn real income.' },
+  { icon: Users, accent: 'text-[#B8C9C0] bg-white/5 ring-white/15', title: 'Grow Together', desc: 'Join a supportive community and achieve more.' },
 ]
 
 const footerQuickLinks: { label: string; href: string }[] = [
@@ -291,6 +296,277 @@ const fadeUp = {
   },
 }
 
+const testimonialHeading = {
+  hidden: { opacity: 0, y: 28, filter: 'blur(10px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.6, ease: 'easeOut' },
+  },
+}
+
+const testimonialRow = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.15 },
+  },
+}
+
+const testimonialSlideIn = (fromLeft: boolean) => ({
+  hidden: { opacity: 0, x: fromLeft ? -72 : 72 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+  },
+})
+
+const testimonialVideoIn = {
+  hidden: { opacity: 0, scale: 0.82 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: { type: 'spring', stiffness: 220, damping: 20 },
+  },
+}
+
+function TestimonialPagination({
+  index,
+  onSelect,
+  prefersReducedMotion,
+}: {
+  index: number
+  onSelect: (i: number) => void
+  prefersReducedMotion: boolean | null
+}) {
+  const transition = prefersReducedMotion ? { duration: 0 } : { duration: 0.45, ease: 'easeOut' as const }
+  return (
+    <div className="flex items-center justify-center mt-5 gap-1.5">
+      {testimonialList.map((t, i) => {
+        const active = i === index
+        return (
+          <Fragment key={t.id}>
+            <button
+              type="button"
+              aria-label={`Go to testimonial ${i + 1}`}
+              onClick={() => onSelect(i)}
+              className="flex items-center cursor-pointer p-1 -m-1"
+            >
+              <motion.span
+                initial={false}
+                animate={{ width: active ? 9 : 7, height: active ? 9 : 7, backgroundColor: active ? '#1F4D3A' : '#D8D4CB' }}
+                transition={transition}
+                className="rounded-full"
+              />
+            </button>
+            {i < testimonialList.length - 1 && (
+              <motion.span
+                initial={false}
+                animate={{ width: active ? 22 : 9, backgroundColor: active ? '#1F4D3A' : '#D8D4CB' }}
+                transition={transition}
+                className="hidden h-[2px] rounded-full"
+              />
+            )}
+          </Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
+const footerGridStagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } },
+}
+
+const footerColIn = {
+  hidden: { opacity: 0, y: 22 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: 'easeOut' },
+  },
+}
+
+const pricingPlans: {
+  key: 'free' | 'pro' | 'premium'
+  name: string
+  tagline: string
+  icon: LucideIcon
+  accent: string
+  accentDark: string
+  period: string
+  priceMonthly: string
+  priceAnnual: string
+  annualNote: string
+  features: string[]
+  cta: string
+  orderClass: string
+  ribbon: boolean
+  shimmer: boolean
+  borderClass: string
+  hoverBorderClass: string
+  shadowClass: string
+  hoverShadowClass: string
+  ctaClass: string
+}[] = [
+  {
+    key: 'free',
+    name: 'Free',
+    tagline: 'Explore and get started',
+    icon: BookOpen,
+    accent: '#1F4D3A',
+    accentDark: '#14382A',
+    period: '/ forever',
+    priceMonthly: '৳0',
+    priceAnnual: '৳0',
+    annualNote: '',
+    features: ['Access to 3 free courses', 'Community forum access', 'Basic certificate', 'Limited freelance marketplace browsing'],
+    cta: 'Start Free',
+    orderClass: 'order-2 lg:order-none',
+    ribbon: false,
+    shimmer: false,
+    borderClass: 'border-[#E8E4DD]',
+    hoverBorderClass: 'hover:border-[#1F4D3A]',
+    shadowClass: 'shadow-[0_8px_28px_-12px_rgba(31,77,58,0.14)]',
+    hoverShadowClass: 'hover:shadow-[0_26px_54px_-18px_rgba(31,77,58,0.30)]',
+    ctaClass: 'border-2 border-[#1F4D3A] bg-white text-[#1F4D3A] hover:bg-[#1F4D3A] hover:text-white',
+  },
+  {
+    key: 'pro',
+    name: 'Pro',
+    tagline: 'For serious learners ready to earn',
+    icon: GraduationCap,
+    accent: '#E07B22',
+    accentDark: '#B85E0F',
+    period: '/ month',
+    priceMonthly: '৳990',
+    priceAnnual: '৳792',
+    annualNote: 'billed ৳9,504/yr · save ৳2,376',
+    features: ['Full access to all 25+ courses', 'Verified certificates', 'Freelance marketplace access', '15% referral commission', 'Priority job placement support', 'Weekly skill challenges entry'],
+    cta: 'Get Pro',
+    orderClass: 'order-1 md:col-span-2 lg:order-none lg:col-span-1',
+    ribbon: true,
+    shimmer: true,
+    borderClass: 'border-transparent',
+    hoverBorderClass: 'hover:border-transparent',
+    shadowClass: 'shadow-[0_18px_44px_-16px_rgba(224,123,34,0.32)]',
+    hoverShadowClass: 'hover:shadow-[0_30px_60px_-20px_rgba(224,123,34,0.40)]',
+    ctaClass: 'bg-[#E07B22] text-white shadow-[0_10px_20px_-8px_rgba(224,123,34,0.55)] hover:bg-[#E07B22]/90',
+  },
+  {
+    key: 'premium',
+    name: 'Premium',
+    tagline: 'Maximum earning potential',
+    icon: Crown,
+    accent: '#D9A441',
+    accentDark: '#B8842B',
+    period: '/ month',
+    priceMonthly: '৳1,990',
+    priceAnnual: '৳1,592',
+    annualNote: 'billed ৳19,104/yr · save ৳4,776',
+    features: ['Everything in Pro', '1-on-1 mentor sessions', '25% referral commission', 'Guaranteed job interview assistance', 'Early access to new courses', 'Dedicated earnings manager'],
+    cta: 'Get Premium',
+    orderClass: 'order-3 lg:order-none',
+    ribbon: false,
+    shimmer: false,
+    borderClass: 'border-[#E8E4DD]',
+    hoverBorderClass: 'hover:border-[#D9A441]',
+    shadowClass: 'shadow-[0_8px_28px_-12px_rgba(31,77,58,0.14)]',
+    hoverShadowClass: 'hover:shadow-[0_26px_54px_-18px_rgba(217,164,65,0.32)]',
+    ctaClass: 'bg-[#D9A441] text-[#3A2A08] shadow-[0_10px_20px_-8px_rgba(217,164,65,0.50)] hover:bg-[#D9A441]/90',
+  },
+]
+
+function PlanPrice({ amount, period, note, noFlip, prefersReducedMotion }: { amount: string; period: string; note: string; noFlip: boolean; prefersReducedMotion: boolean | null }) {
+  return (
+    <div className="mb-2">
+      <div className="relative [perspective:600px]">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div
+            key={amount}
+            initial={noFlip || prefersReducedMotion ? false : { opacity: 0, y: 18, rotateX: -60 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            exit={noFlip || prefersReducedMotion ? undefined : { opacity: 0, y: -18, rotateX: 60 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="flex items-baseline gap-1.5 justify-center will-change-transform"
+          >
+            <span className="text-[36px] font-bold text-[#1F4D3A] tracking-tight leading-none sm:text-[40px]">{amount}</span>
+            <span className="text-[13px] font-medium text-[#6B7280]">{period}</span>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <div className="min-h-[22px]">
+        <AnimatePresence mode="wait" initial={false}>
+          {note ? (
+            <motion.p
+              key={amount + note}
+              initial={noFlip || prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={noFlip || prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="pt-1 text-[11px] font-semibold text-[#1F4D3A]"
+            >
+              {note}
+            </motion.p>
+          ) : null}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
+function PricingCheck({ delay, prefersReducedMotion }: { delay: number; prefersReducedMotion: boolean | null }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="w-[18px] h-[18px] text-[#1F4D3A] shrink-0 mt-[1px]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <motion.path
+        d="M20 6 9 17l-5-5"
+        initial={prefersReducedMotion ? { pathLength: 1 } : { pathLength: 0 }}
+        whileInView={prefersReducedMotion ? undefined : { pathLength: 1 }}
+        viewport={{ once: true, margin: '-40px' }}
+        transition={{ duration: 0.4, delay, ease: 'easeOut' }}
+      />
+    </svg>
+  )
+}
+
+function RippleButton({ onClick, children, className }: { onClick?: () => void; children: ReactNode; className?: string }) {
+  const [ripples, setRipples] = useState<{ id: number; x: number; y: number; size: number }[]>([])
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const size = Math.max(rect.width, rect.height) * 2
+    if (typeof window !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setRipples((r) => [...r, { id: Date.now() + Math.random(), x: e.clientX - rect.left, y: e.clientY - rect.top, size }])
+    }
+    onClick?.()
+  }
+  return (
+    <button type="button" onClick={handleClick} className={cn('relative overflow-hidden', className)}>
+      {ripples.map((r) => (
+        <span
+          key={r.id}
+          aria-hidden="true"
+          onAnimationEnd={() => setRipples((cur) => cur.filter((x) => x.id !== r.id))}
+          className="pricing-ripple"
+          style={{ left: r.x, top: r.y, width: r.size, height: r.size }}
+        />
+      ))}
+      {children}
+    </button>
+  )
+}
+
 const navLinks = [
   { label: 'Home', href: '#home' },
   { label: 'Courses', href: '#courses' },
@@ -300,6 +576,68 @@ const navLinks = [
   { label: 'Community', href: '#how-it-works' },
   { label: 'Pricing', href: '#pricing' },
 ]
+
+const navCoursesDropdownItems: { label: string; key: string; color: string }[] = [
+  { label: 'Design', key: 'Design & Media', color: 'bg-[#7C3AED]' },
+  { label: 'UI/UX', key: 'Design & Media', color: 'bg-[#A78BFA]' },
+  { label: 'Business', key: 'Business & Marketing', color: 'bg-[#E07B22]' },
+  { label: 'Marketing', key: 'Business & Marketing', color: 'bg-[#F59E0B]' },
+  { label: 'Development', key: 'Development & Tech', color: 'bg-[#1E293B]' },
+]
+
+const courseCardTheme: Record<string, { grad: string }> = {
+  'Design & Media': { grad: 'from-[#7C3AED] via-[#8B5CF6] to-[#A78BFA]' },
+  'Development & Tech': { grad: 'from-[#1E293B] via-[#263449] to-[#33425C]' },
+  'AI & Data Science': { grad: 'from-[#1E3A8A] via-[#1D4ED8] to-[#2563EB]' },
+  'Business & Marketing': { grad: 'from-[#E07B22] via-[#EA8F3D] to-[#F59E0B]' },
+  'Personal Growth': { grad: 'from-[#059669] via-[#10B981] to-[#34D399]' },
+  'Career Development': { grad: 'from-[#0F766E] via-[#14B8A6] to-[#2DD4BF]' },
+  'Language & Communication': { grad: 'from-[#D97706] via-[#F59E0B] to-[#FBBF24]' },
+}
+
+const defaultCardTheme = { grad: 'from-[#7C3AED] via-[#8B5CF6] to-[#A78BFA]' }
+
+const courseFallbackImages = [
+  'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1512295767273-ac109ac3acfa?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1555949963-ff9fe0c870eb?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1559028012-481c04fa702d?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1555255707-c07966088b7b?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1543286386-713bdd548da4?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=600&h=340&fit=crop',
+  'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=600&h=340&fit=crop',
+]
+
+function courseTagLabel(course: { title?: string; skills?: string[]; tags?: string[] }): string {
+  const hay = [...(Array.isArray(course.skills) ? course.skills : []), ...(Array.isArray(course.tags) ? course.tags : []), String(course.title || '')]
+    .join(' ')
+    .toLowerCase()
+  if (hay.includes('ux') || hay.includes('ui') || hay.includes('figma') || hay.includes('prototyp')) return 'UI/UX'
+  if (hay.includes('seo') || hay.includes('marketing') || hay.includes('ads')) return 'Marketing'
+  if (hay.includes('design') || hay.includes('photoshop') || hay.includes('brand')) return 'Design'
+  if (hay.includes('development') || hay.includes('web ') || hay.includes('html') || hay.includes('code')) return 'Development'
+  if (hay.includes('business') || hay.includes('management') || hay.includes('sales')) return 'Business'
+  return 'Design'
+}
+
+function courseDurationMonths(course: { duration?: string; hours?: number }): string {
+  const match = /(\d+)\s*months?/i.exec(String(course.duration || ''))
+  let months = match ? Number(match[1]) : Math.round((Number(course.hours) || 30) / 5.5)
+  if (!Number.isFinite(months) || months <= 0) months = 6
+  return `${Math.max(3, Math.min(8, months))} Months`
+}
 
 function AnimatedCounter({ to, suffix = '', decimals = 0 }: { to: number; suffix?: string; decimals?: number }) {
   const ref = useRef(null)
@@ -332,6 +670,20 @@ function AnimatedCounter({ to, suffix = '', decimals = 0 }: { to: number; suffix
 }
 
 
+function Stars({ rating, size = 'w-3 h-3', className }: { rating: number; size?: string; className?: string }) {
+  const rounded = Math.round(rating)
+  return (
+    <span className={cn('inline-flex items-center gap-[2px]', className)} aria-label={`Rated ${rating} out of 5`}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <Star
+          key={i}
+          className={cn(size, i < rounded ? 'fill-[#E07B22] text-[#E07B22]' : 'fill-transparent text-[#D9D2C4]')}
+        />
+      ))}
+    </span>
+  )
+}
+
 const smarterLeftFeatures: {
   icon: LucideIcon
   tint: string
@@ -345,18 +697,22 @@ const smarterLeftFeatures: {
   { icon: Users, tint: 'bg-[#FDF0F5]', iconColor: 'text-[#EC4899]', title: 'Community Support', desc: 'Collaborate with peers, mentors and a thriving community.' },
 ]
 
-const smarterStats: {
+const startLearningSteps: {
   icon: LucideIcon
-  tint: string
-  badge: string
-  value: string
-  label: string
+  tile: string
+  iconColor: string
+  title: string
+  desc: string
 }[] = [
-  { icon: GraduationCap, tint: 'bg-[#F3EEFF]', badge: 'bg-[#6D3DF5]', value: '500+', label: 'Expert Instructors' },
-  { icon: Play, tint: 'bg-[#EEF4FF]', badge: 'bg-[#3478F6]', value: '2000+', label: 'Video Lessons' },
-  { icon: FolderOpen, tint: 'bg-[#ECFBF5]', badge: 'bg-[#18A878]', value: '100+', label: 'Learning Paths' },
-  { icon: Users, tint: 'bg-[#FEF5E7]', badge: 'bg-[#F59E0B]', value: '50K+', label: 'Active Learners' },
+  { icon: UserPlus, tile: 'bg-[#DFF3E6]', iconColor: 'text-[#0B5D4B]', title: 'Create Your Free Account', desc: 'Sign up quickly and get started in just a few minutes.' },
+  { icon: BookOpen, tile: 'bg-[#FDEBDD]', iconColor: 'text-[#F58220]', title: 'Explore Online Courses', desc: 'Browse a wide range of courses and find what matches your goals.' },
+  { icon: PlayCircle, tile: 'bg-[#EDE7FF]', iconColor: 'text-[#7C5CFC]', title: 'Learn at Your Own Pace', desc: 'Access videos, resources and study materials anytime, anywhere.' },
+  { icon: Award, tile: 'bg-[#E3EFFF]', iconColor: 'text-[#2F7BF6]', title: 'Get Certified', desc: 'Complete your courses and receive certificates to showcase your skills.' },
+  { icon: TrendingUp, tile: 'bg-[#FDE7E9]', iconColor: 'text-[#E5484D]', title: 'Build a Better Future', desc: 'Gain in-demand skills and open doors to new opportunities.' },
 ]
+
+const startLearningLine1 = ["It's", 'Easy', 'to']
+const startLearningLine2 = ['Start', 'Learning']
 
 const expertInstructors: {
   id: number
@@ -371,10 +727,10 @@ const expertInstructors: {
   students: string
   image: string
 }[] = [
-  { id: 1, name: 'Arjun Mehta', title: 'UI/UX Design Expert', accent: 'text-[#6D3DF5]', glow: 'bg-[#F3EEFF]', glowRing: 'bg-[#F3EEFF]/70', bio: '10+ years crafting intuitive interfaces for startups and global brands.', rating: '4.9', courses: '2 Courses', students: '25,000+', image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop&crop=face' },
-  { id: 2, name: 'Neha Kapoor', title: 'Digital Marketing Expert', accent: 'text-[#3478F6]', glow: 'bg-[#EEF4FF]', glowRing: 'bg-[#EEF4FF]/70', bio: 'Former growth lead helping brands scale with data-driven campaigns.', rating: '4.8', courses: '3 Courses', students: '20,000+', image: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&h=400&fit=crop&crop=face' },
-  { id: 3, name: 'Rohit Verma', title: 'Full Stack Developer', accent: 'text-[#18A878]', glow: 'bg-[#ECFBF5]', glowRing: 'bg-[#ECFBF5]/70', bio: 'Full-stack engineer shipping production apps used by millions.', rating: '4.9', courses: '2 Courses', students: '30,000+', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face' },
-  { id: 4, name: 'Ananya Sharma', title: 'Data Science Expert', accent: 'text-[#6D3DF5]', glow: 'bg-[#F3EEFF]', glowRing: 'bg-[#F3EEFF]/70', bio: 'Data scientist turning raw data into actionable business insights.', rating: '4.8', courses: '2 Courses', students: '18,000+', image: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&h=400&fit=crop&crop=face' },
+  { id: 1, name: 'Arjun Mehta', title: 'UI/UX Design Expert', accent: 'text-[#6D3DF5]', glow: 'bg-[#F3EEFF]', glowRing: 'bg-[#F3EEFF]/70', bio: '10+ years crafting intuitive interfaces for startups and global brands.', rating: '4.9', courses: '2 Courses', students: '25,000+', image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop&crop=face' },
+  { id: 2, name: 'Neha Kapoor', title: 'Digital Marketing Expert', accent: 'text-[#3478F6]', glow: 'bg-[#EEF4FF]', glowRing: 'bg-[#EEF4FF]/70', bio: 'Former growth lead helping brands scale with data-driven campaigns.', rating: '4.8', courses: '3 Courses', students: '20,000+', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop&crop=face' },
+  { id: 3, name: 'Rohit Verma', title: 'Full Stack Developer', accent: 'text-[#18A878]', glow: 'bg-[#ECFBF5]', glowRing: 'bg-[#ECFBF5]/70', bio: 'Full-stack engineer shipping production apps used by millions.', rating: '4.9', courses: '2 Courses', students: '30,000+', image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400&h=400&fit=crop&crop=face' },
+  { id: 4, name: 'Ananya Sharma', title: 'Data Science Expert', accent: 'text-[#6D3DF5]', glow: 'bg-[#F3EEFF]', glowRing: 'bg-[#F3EEFF]/70', bio: 'Data scientist turning raw data into actionable business insights.', rating: '4.8', courses: '2 Courses', students: '18,000+', image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=480&h=600&fit=crop' },
   { id: 5, name: 'Vikram Singh', title: 'AI & ML Expert', accent: 'text-[#3478F6]', glow: 'bg-[#EEF4FF]', glowRing: 'bg-[#EEF4FF]/70', bio: 'AI researcher mentoring thousands on machine learning fundamentals.', rating: '4.9', courses: '1 Courses', students: '22,000+', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face' },
   { id: 6, name: 'Sneha Iyer', title: 'Product Management Expert', accent: 'text-[#18A878]', glow: 'bg-[#ECFBF5]', glowRing: 'bg-[#ECFBF5]/70', bio: 'Product leader guiding teams to ship customer-first roadmaps.', rating: '4.8', courses: '3 Courses', students: '15,000+', image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&crop=face' },
   { id: 7, name: 'Karan Malhotra', title: 'Mobile Dev Expert', accent: 'text-[#6D3DF5]', glow: 'bg-[#F3EEFF]', glowRing: 'bg-[#F3EEFF]/70', bio: 'Flutter & React Native specialist building award-winning apps.', rating: '4.8', courses: '2 Courses', students: '17,000+', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop&crop=face' },
@@ -410,17 +766,17 @@ const expertInstructors: {
   { id: 37, name: 'Arnav Gupta', title: 'AI Product Expert', accent: 'text-[#3478F6]', glow: 'bg-[#EEF4FF]', glowRing: 'bg-[#EEF4FF]/70', bio: 'AI product expert building and shipping ML features.', rating: '4.6', courses: '2 Courses', students: '22,400+', image: 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=400&h=400&fit=crop&crop=face' },
 ]
 
-function FooterLinksCol({ title, icon, accent, links }: {
+function FooterLinksCol({ title, icon, links }: {
   title: string
   icon: ReactNode
-  accent: string
   links: { label: string; href: string }[]
 }) {
   return (
-    <div className="col-span-2 md:col-span-1">
-      <h4 className={`flex items-center gap-2 text-[13px] font-bold ${accent} mb-4`}>
-        {icon}
+    <div>
+      <h4 className="group/title flex items-center gap-2 text-[16px] font-semibold text-white mb-4">
+        <span className="transition-transform duration-300 group-hover/title:scale-110 group-hover/title:rotate-6">{icon}</span>
         {title}
+        <span aria-hidden="true" className="h-px flex-1 min-w-[12px] bg-gradient-to-r from-white/25 to-transparent" />
       </h4>
       <ul className="space-y-2.5">
         {links.map((link) => (
@@ -436,9 +792,11 @@ function FooterLinksCol({ title, icon, accent, links }: {
                   }
                 }
               }}
-              className="text-[13px] text-[#8B94A8] hover:text-white transition-colors"
+              className="group/link relative inline-flex items-center gap-1.5 text-[14px] text-[#B8C9C0] hover:text-[#E07B22] transition-colors duration-200"
             >
+              <ArrowRight className="w-3.5 h-3.5 text-[#E07B22] -translate-x-1.5 opacity-0 transition-all duration-300 group-hover/link:translate-x-0 group-hover/link:opacity-100 shrink-0" />
               {link.label}
+              <span aria-hidden="true" className="absolute left-0 -bottom-[3px] h-[2px] w-full origin-left scale-x-0 rounded-full bg-gradient-to-r from-[#E07B22] to-[#F59E0B] transition-transform duration-300 group-hover/link:scale-x-100" />
             </a>
           </li>
         ))}
@@ -499,6 +857,36 @@ const categoryIconMap: Record<string, LucideIcon> = {
   'Language & Communication': Languages,
 }
 
+const categorySkillPool: Record<string, string[]> = {
+  'Development & Tech': ['HTML', 'CSS', 'JavaScript', 'Python', 'Node.js', 'React', 'AWS', 'SQL'],
+  'Design & Media': ['Photoshop', 'Figma', 'Illustrator', 'Color Theory', 'Typography', 'Motion Design'],
+  'Business & Marketing': ['SEO', 'Content Strategy', 'Analytics', 'Social Media', 'Sales', 'Branding'],
+  'AI & Data Science': ['Python', 'Machine Learning', 'Data Visualization', 'SQL', 'Deep Learning', 'NLP'],
+  'Personal Growth': ['Productivity', 'Leadership', 'Communication', 'Emotional Intelligence'],
+  'Career Development': ['Resume Writing', 'Interview Prep', 'LinkedIn', 'Personal Branding'],
+  'Language & Communication': ['Business English', 'Public Speaking', 'Copywriting', 'Storytelling'],
+}
+
+const heroFilterChips: { label: string; key: string; icon: LucideIcon }[] = [
+  { label: 'Web Dev', key: 'Development & Tech', icon: Code },
+  { label: 'SEO', key: 'Business & Marketing', icon: TrendingUp },
+  { label: 'UI/UX', key: 'Design & Media', icon: Palette },
+  { label: 'AI & ML', key: 'AI & Data Science', icon: Brain },
+]
+
+const marqueeCourses: { title: string; img: string }[] = [
+  { title: 'Full-Stack Web Development', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop&crop=face' },
+  { title: 'Advanced React & Next.js', img: 'https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?w=200&h=200&fit=crop&crop=face' },
+  { title: 'UI/UX Design Masterclass', img: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop&crop=face' },
+  { title: 'Digital Marketing Foundations', img: 'https://images.unsplash.com/photo-1463453091185-61582044d556?w=200&h=200&fit=crop&crop=face' },
+  { title: 'Data Science with Python', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=200&h=200&fit=crop&crop=face' },
+  { title: 'Machine Learning Essentials', img: 'https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?w=200&h=200&fit=crop&crop=face' },
+  { title: 'Flutter App Development', img: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop&crop=face' },
+  { title: 'Freelancing & Client Success', img: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=200&h=200&fit=crop&crop=face' },
+  { title: 'Cloud & DevOps Engineering', img: 'https://images.unsplash.com/photo-1552058544-f2b08422138a?w=200&h=200&fit=crop&crop=face' },
+  { title: 'Mobile App Development', img: 'https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=200&h=200&fit=crop&crop=face' },
+]
+
 type SortKey = 'popular' | 'rating' | 'priceLow' | 'priceHigh' | 'newest'
 
 const sortOptions: { key: SortKey; label: string }[] = [
@@ -544,10 +932,10 @@ function CtaScene() {
   return (
     <svg viewBox="0 0 120 120" className="w-20 h-20 shrink-0" fill="none" aria-hidden="true">
       <defs>
-        <linearGradient id="ctaG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#6D3DF5" /><stop offset="100%" stopColor="#3478F6" /></linearGradient>
+        <linearGradient id="ctaG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#E07B22" /><stop offset="100%" stopColor="#F59E0B" /></linearGradient>
       </defs>
-      <circle cx="60" cy="60" r="46" fill="#6D3DF5" opacity="0.12" />
-      <circle cx="60" cy="60" r="56" fill="none" stroke="#A78BFA" strokeWidth="1.5" strokeDasharray="2 6" opacity="0.5" />
+      <circle cx="60" cy="60" r="46" fill="#E07B22" opacity="0.12" />
+      <circle cx="60" cy="60" r="56" fill="none" stroke="#F8B681" strokeWidth="1.5" strokeDasharray="2 6" opacity="0.5" />
       <rect x="26" y="26" width="68" height="68" rx="18" fill="url(#ctaG)" />
       <path d="M52 44 v22 l16 9 v-22 z" fill="#FFFFFF" />
       <circle cx="60" cy="60" r="8" fill="none" stroke="#FFFFFF" strokeWidth="2" opacity="0.5" />
@@ -555,10 +943,384 @@ function CtaScene() {
   )
 }
 
+/* ==========================================================================
+   Landing — "Turn Your Skills Into Income" section motion variants
+   ========================================================================== */
+const earnFadeUpBlur = {
+  hidden: { opacity: 0, y: 26, filter: 'blur(8px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
+  },
+}
+
+const earnImageIn = {
+  hidden: { opacity: 0, x: -46, scale: 0.94 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1] as const },
+  },
+}
+
+const earnCardContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1 } },
+}
+
+const earnCardSlideRight = {
+  hidden: { opacity: 0, x: 48 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.55, ease: 'easeOut' as const } },
+}
+
+const earnIconPop = {
+  hidden: { scale: 0, opacity: 0, rotate: -12 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    rotate: 0,
+    transition: { type: 'spring', stiffness: 300, damping: 13, delay: 0.12 } as const,
+  },
+}
+
+const earnPillContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.12 } },
+}
+
+const earnPillItem = {
+  hidden: { opacity: 0, y: 12, scale: 0.85 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.45, ease: 'easeOut' as const } },
+}
+
+const earnStatContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+}
+
+const earnStatCard = {
+  hidden: { opacity: 0, y: 22 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
+}
+
+const earnStatIcon = {
+  hidden: { scale: 0.4, opacity: 0 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    transition: { type: 'spring', stiffness: 280, damping: 15, delay: 0.08 } as const,
+  },
+}
+
+const earnFloatPop = {
+  hidden: { opacity: 0, scale: 0.6, y: 18 },
+  visible: { opacity: 1, scale: 1, y: 0 },
+}
+
+const earnWordContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } },
+}
+
+const earnWord = {
+  hidden: { opacity: 0, y: 18, filter: 'blur(8px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
+  },
+}
+
+/** Counts a stat number up from 0 when scrolled into view. */
+function EarnCountUp({
+  value,
+  decimals = 0,
+  prefix = '',
+  suffix = '',
+  prefersReducedMotion,
+  className,
+}: {
+  value: number
+  decimals?: number
+  prefix?: string
+  suffix?: string
+  prefersReducedMotion: boolean | null
+  className?: string
+}) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const inView = useInView(ref, { once: true, margin: '-40px' })
+  const [n, setN] = useState(prefersReducedMotion ? value : 0)
+
+  useEffect(() => {
+    if (!inView || prefersReducedMotion) return
+    const controls = animate(0, value, {
+      duration: 1.5,
+      ease: 'easeOut',
+      onUpdate: (v) => setN(v),
+    })
+    return () => controls.stop()
+  }, [inView, value, prefersReducedMotion])
+
+  return (
+    <span ref={ref} className={className}>
+      {prefix}
+      {n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}
+      {suffix}
+    </span>
+  )
+}
+
+/** Floating white overlay card used on the left freelancer photo. */
+function EarnFloatingCard({
+  className,
+  entranceDelay = 0,
+  bobDelay = 0,
+  bobHeight = 10,
+  parX,
+  parY,
+  parallax = true,
+  prefersReducedMotion,
+  children,
+}: {
+  className?: string
+  entranceDelay?: number
+  bobDelay?: number
+  bobHeight?: number
+  parX: MotionValue<number>
+  parY: MotionValue<number>
+  parallax?: boolean
+  prefersReducedMotion: boolean | null
+  children: ReactNode
+}) {
+  const fmtX = useTransform(parX, (v) => (parallax ? v * -10 : 0))
+  const fmtY = useTransform(parY, (v) => (parallax ? v * -10 : 0))
+
+  return (
+    <motion.div style={{ x: fmtX, y: fmtY }} className={cn('absolute z-20', className)}>
+      <motion.div
+        initial={prefersReducedMotion ? false : 'hidden'}
+        whileInView={prefersReducedMotion ? undefined : 'visible'}
+        viewport={{ once: true, margin: '-60px' }}
+        variants={earnFloatPop}
+        transition={prefersReducedMotion ? {} : { type: 'spring', stiffness: 280, damping: 16, delay: entranceDelay }}
+        style={{ transformOrigin: 'center' }}
+      >
+        <motion.div
+          animate={prefersReducedMotion ? undefined : { y: [0, -bobHeight, 0] }}
+          transition={prefersReducedMotion ? {} : { duration: 4.6, repeat: Infinity, ease: 'easeInOut', delay: bobDelay }}
+          className="rounded-xl bg-white shadow-lg shadow-[#1F4D3A]/10 backdrop-blur px-4 py-3 leading-none"
+        >
+          {children}
+        </motion.div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+/** Small rotated black poster card stamped on the photo corner. */
+function EarnPoster({ className }: { className?: string }) {
+  return (
+    <div className={cn('absolute z-10 -rotate-6 rounded-md bg-[#0B0B12] px-4 py-2.5 shadow-xl shadow-black/40 ring-1 ring-white/10', className)}>
+      <p className="text-center text-[11px] leading-[1.35] font-extrabold tracking-[0.16em] text-[#F5C518] uppercase">
+        Learn Skills<br />Earn Income
+      </p>
+    </div>
+  )
+}
+
+/** Slow, cinematic pan-zoom over the freelancer image once scrolled into view. */
+function EarnKenBurns({
+  src,
+  alt,
+  prefersReducedMotion,
+}: {
+  src: string
+  alt: string
+  prefersReducedMotion: boolean | null
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const inView = useInView(ref, { once: true, margin: '-100px' })
+
+  return (
+    <motion.div
+      ref={ref}
+      className="absolute inset-0 overflow-hidden"
+      animate={
+        inView && !prefersReducedMotion
+          ? { scale: [1.06, 1.2, 1.06], x: [-16, 18, -16] }
+          : undefined
+      }
+      transition={{ duration: 21, repeat: Infinity, ease: 'easeInOut' }}
+      whileHover={prefersReducedMotion ? undefined : { scale: 1.03 }}
+    >
+      <img src={src} alt={alt} className="w-full h-full object-cover object-top" />
+    </motion.div>
+  )
+}
+
+/** Left freelancer photo card with a cream frame and mouse-move parallax overlays. */
+function EarnImagePanel({ prefersReducedMotion }: { prefersReducedMotion: boolean | null }) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
+  const rawX = useMotionValue(0)
+  const rawY = useMotionValue(0)
+  const parX = useSpring(rawX, { stiffness: 55, damping: 16, mass: 0.6 })
+  const parY = useSpring(rawY, { stiffness: 55, damping: 16, mass: 0.6 })
+  const badgeX = useTransform(parX, (v) => v * -16)
+  const badgeY = useTransform(parY, (v) => v * -16)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const sync = () => setIsDesktop(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  return (
+    <motion.div
+      initial={prefersReducedMotion ? false : 'hidden'}
+      whileInView={prefersReducedMotion ? undefined : 'visible'}
+      viewport={{ once: true, margin: '-80px' }}
+      variants={earnImageIn}
+      className="relative h-full"
+    >
+      {/* Decorative background behind the photo frame */}
+      <div aria-hidden="true" className="pointer-events-none absolute -top-8 -left-6 z-0 w-40 h-40 rounded-full bg-[#FDEBDD] blur-2xl opacity-80" />
+      <div aria-hidden="true" className="pointer-events-none absolute -bottom-10 -right-6 z-0 w-44 h-44 rounded-full bg-[#DFF3E6] blur-2xl opacity-80" />
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-5 -left-5 z-0 w-28 h-28 rounded-full border-2 border-dashed border-[#E07B22]/40"
+        animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+        transition={{ duration: 46, repeat: Infinity, ease: 'linear' }}
+      />
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-4 -right-5 z-0 w-24 h-24 rounded-full border-2 border-dashed border-[#18A878]/40"
+        animate={prefersReducedMotion ? undefined : { rotate: -360 }}
+        transition={{ duration: 52, repeat: Infinity, ease: 'linear' }}
+      />
+
+      {/* Gradient frame around the photo */}
+      <div className="relative z-10 h-full rounded-[20px] bg-gradient-to-br from-[#E07B22] via-[#F5C518] to-[#18A878] p-[5px] shadow-[0_28px_70px_-24px_rgba(31,77,58,0.45)]">
+        <div
+          ref={panelRef}
+          onMouseMove={(e) => {
+            if (!isDesktop || prefersReducedMotion) return
+            const el = panelRef.current
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            rawX.set(((e.clientX - rect.left) / rect.width - 0.5) * 16)
+            rawY.set(((e.clientY - rect.top) / rect.height - 0.5) * 16)
+          }}
+          onMouseLeave={() => {
+            rawX.set(0)
+            rawY.set(0)
+          }}
+          className="relative h-full min-h-[360px] w-full overflow-hidden rounded-[15px] bg-white sm:min-h-[480px] lg:min-h-[560px]"
+        >
+          <EarnKenBurns
+            src="https://plain-apac-prod-public.komododecks.com/202609/25/vLPtT4lQgDXLgQ2EpfaL/image.jpg"
+            alt="Man working on a laptop in a warm home office"
+            prefersReducedMotion={prefersReducedMotion}
+          />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#1F4D3A]/25 via-transparent to-transparent" />
+
+          {/* Poster graphic */}
+          <motion.div
+            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.8, y: -8 }}
+            whileInView={prefersReducedMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ type: 'spring', stiffness: 240, damping: 16, delay: 0.25 }}
+          >
+            <EarnPoster className="top-5 right-5" />
+          </motion.div>
+
+          {/* Earned stat card */}
+          <EarnFloatingCard className="top-20 right-5 px-4 py-3" entranceDelay={0.5} bobDelay={0.5} bobHeight={7} parX={parX} parY={parY} prefersReducedMotion={prefersReducedMotion}>
+            <p className="text-[10px] font-bold text-[#5A6B63]">Earned</p>
+            <div className="mt-0.5 flex items-center gap-2">
+              <span className="text-[18px] leading-none font-extrabold text-[#1F4D3A] tabular-nums">
+                <EarnCountUp value={12450} prefix="$" prefersReducedMotion={prefersReducedMotion} />
+              </span>
+              <span className="flex items-center gap-0.5 text-[10px] font-extrabold text-[#18A878]">
+                <TrendingUp className="w-3.5 h-3.5" strokeWidth={2.6} /> +32%
+              </span>
+            </div>
+            <p className="text-[9.5px] font-semibold text-[#18A878] leading-none">this month</p>
+          </EarnFloatingCard>
+
+          {/* Certificate card */}
+          <EarnFloatingCard className="top-44 right-5 px-4 py-3" entranceDelay={0.8} bobDelay={1.4} bobHeight={6} parX={parX} parY={parY} prefersReducedMotion={prefersReducedMotion}>
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[#DFF3E6]">
+                <FileText className="w-[15px] h-[15px] text-[#18A878]" strokeWidth={2.2} />
+                <span className="absolute -right-0.5 -bottom-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#18A878] ring-2 ring-white">
+                  <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.2} />
+                </span>
+              </span>
+              <div>
+                <p className="text-[11px] leading-tight font-extrabold text-[#1F4D3A]">Certificate</p>
+                <p className="text-[10px] leading-tight font-semibold text-[#5A6B63]">Completed</p>
+              </div>
+            </div>
+          </EarnFloatingCard>
+
+          {/* In-progress card */}
+          <EarnFloatingCard className="bottom-5 left-5 px-4 py-3" entranceDelay={1.1} bobDelay={0.9} bobHeight={8} parX={parX} parY={parY} prefersReducedMotion={prefersReducedMotion}>
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#DFF3E6]">
+                <Play className="w-4 h-4 text-[#18A878] fill-[#18A878]" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] leading-tight font-extrabold text-[#1F4D3A]">Web Development</p>
+                <p className="text-[10px] leading-tight font-semibold text-[#5A6B63]">· In Progress</p>
+                <div className="mt-1.5 h-1.5 w-[120px] rounded-full bg-[#E9E7DF] overflow-hidden">
+                  <motion.div
+                    initial={prefersReducedMotion ? false : { width: 0 }}
+                    whileInView={prefersReducedMotion ? undefined : { width: '68%' }}
+                    viewport={{ once: true, margin: '-60px' }}
+                    transition={{ duration: 1.1, delay: 0.9, ease: 'easeOut' }}
+                    className="h-full rounded-full bg-[#18A878]"
+                  />
+                </div>
+              </div>
+            </div>
+          </EarnFloatingCard>
+
+          {/* Glowing orange dollar badge */}
+          <motion.div
+            style={{ x: badgeX, y: badgeY }}
+            initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.4 }}
+            whileInView={prefersReducedMotion ? undefined : { opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={prefersReducedMotion ? {} : { type: 'spring', stiffness: 280, damping: 14, delay: 1.35 }}
+            className="absolute bottom-7 right-7 z-10"
+          >
+            <motion.div
+              animate={prefersReducedMotion ? undefined : { y: [0, -10, 0] }}
+              transition={prefersReducedMotion ? {} : { duration: 4.6, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+              className="relative w-12 h-12 rounded-full bg-[#E07B22] shadow-lg shadow-[#E07B22]/40 flex items-center justify-center"
+            >
+              <span className="earn-pulse-ring absolute -inset-1.5 rounded-full border-2 border-[#E07B22]/60" aria-hidden="true" />
+              <DollarSign className="w-6 h-6 text-white" strokeWidth={2.4} />
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 export function LandingPage() {
   const router = useRouter()
   const { user, isAuthenticated } = useAuth()
   const [scrolled, setScrolled] = useState(false)
+  const [activeSection, setActiveSection] = useState('home')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set())
   const [activeCategory, setActiveCategory] = useState('All')
@@ -570,12 +1332,14 @@ export function LandingPage() {
   const [sortOpen, setSortOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [coursePage, setCoursePage] = useState(1)
+  const [activeTags, setActiveTags] = useState<string[]>([])
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [coursesDropdownOpen, setCoursesDropdownOpen] = useState(false)
+  const [mobileCoursesOpen, setMobileCoursesOpen] = useState(false)
 
   useEffect(() => {
     setCoursePage(1)
-  }, [activeCategory, priceRange, levelFilter, searchQuery, sortOrder])
-  const [expertPage, setExpertPage] = useState(0)
-  const expertTotalPages = Math.ceil(expertInstructors.length / 4)
+  }, [activeCategory, priceRange, levelFilter, searchQuery, sortOrder, activeTags])
   const [earnerSkill, setEarnerSkill] = useState('UI/UX')
   const [enrollingCourse, setEnrollingCourse] = useState<{
     id: number
@@ -603,12 +1367,15 @@ export function LandingPage() {
   }
 
   const [testimonialIndex, setTestimonialIndex] = useState(0)
+  const [testimonialRightIndex, setTestimonialRightIndex] = useState(1)
 
   const [apiCourses, setApiCourses] = useState<any[] | null>(null)
   const [loadingCourses, setLoadingCourses] = useState(true)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoVideoPlaying, setDemoVideoPlaying] = useState(false)
   const [testimonialVideoPlaying, setTestimonialVideoPlaying] = useState(false)
+  const [testimonialVideoPlayed, setTestimonialVideoPlayed] = useState(false)
+  const [testimonialCaptionsOn, setTestimonialCaptionsOn] = useState(false)
   const tiltRawX = useMotionValue(0)
   const tiltRawY = useMotionValue(0)
   const tiltX = useSpring(tiltRawX, { stiffness: 160, damping: 18, mass: 0.5 })
@@ -620,7 +1387,96 @@ export function LandingPage() {
   const prefersReducedMotion = useReducedMotion()
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 40)
+    if (prefersReducedMotion) return
+    const total = testimonialList.length
+    const id = window.setInterval(() => {
+      setTestimonialIndex((i) => (i + 1) % total)
+      setTestimonialRightIndex((i) => (i + 1) % total)
+    }, 6000)
+    return () => window.clearInterval(id)
+  }, [prefersReducedMotion])
+
+  const stepsListRef = useRef<HTMLDivElement>(null)
+  const [isDesktop, setIsDesktop] = useState(false)
+
+  const stepsProgress = useScroll({
+    target: stepsListRef,
+    offset: ['start 0.82', 'end 0.62'],
+  })
+  const glowDotTop = useTransform(stepsProgress.scrollYProgress, (v) => `calc(${Math.min(Math.max(v, 0), 1) * 100}% - 5px)`)
+
+  const parallaxX = useMotionValue(0)
+  const parallaxY = useMotionValue(0)
+  const parallaxSmoothX = useSpring(parallaxX, { stiffness: 120, damping: 22, mass: 0.6 })
+  const parallaxSmoothY = useSpring(parallaxY, { stiffness: 120, damping: 22, mass: 0.6 })
+  const girlParallaxX = useTransform(parallaxSmoothX, (v) => v * -18)
+  const girlParallaxY = useTransform(parallaxSmoothY, (v) => v * -14)
+  const blobRightParX = useTransform(parallaxSmoothX, (v) => v * 32)
+  const blobRightParY = useTransform(parallaxSmoothY, (v) => v * 26)
+  const blobLeftParX = useTransform(parallaxSmoothX, (v) => v * -26)
+  const blobLeftParY = useTransform(parallaxSmoothY, (v) => v * -18)
+  const capParallaxX = useTransform(parallaxSmoothX, (v) => v * -44)
+  const capParallaxY = useTransform(parallaxSmoothY, (v) => v * -30)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const sync = () => setIsDesktop(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  const handleSectionMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+    if (prefersReducedMotion || !isDesktop) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    parallaxX.set(((e.clientX - rect.left) / rect.width - 0.5) * 2)
+    parallaxY.set(((e.clientY - rect.top) / rect.height - 0.5) * 2)
+  }
+
+  const resetSectionParallax = () => {
+    parallaxX.set(0)
+    parallaxY.set(0)
+  }
+
+  const lenisRef = useRef<Lenis | null>(null)
+
+  useEffect(() => {
+    if (prefersReducedMotion) return
+    const lenis = new Lenis({
+      lerp: 0.1,
+      wheelMultiplier: 1,
+      smoothWheel: true,
+    })
+    lenisRef.current = lenis
+    let frame = 0
+    const raf = (time: number) => {
+      lenis.raf(time)
+      frame = requestAnimationFrame(raf)
+    }
+    frame = requestAnimationFrame(raf)
+    return () => {
+      cancelAnimationFrame(frame)
+      lenis.destroy()
+      lenisRef.current = null
+    }
+  }, [prefersReducedMotion])
+
+  useEffect(() => {
+    const sectionIds = navLinks
+      .filter((l) => l.href.startsWith('#'))
+      .map((l) => l.href.slice(1))
+
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 40)
+      const probe = window.scrollY + window.innerHeight * 0.35
+      let current = 'home'
+      for (const id of sectionIds) {
+        const el = document.getElementById(id)
+        if (el && el.offsetTop <= probe) current = id
+      }
+      setActiveSection(current)
+    }
+    handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -635,6 +1491,8 @@ export function LandingPage() {
             const rawTitle = item.title || `Course #${item.id}`
             const localMatch = courses.find(c => c.title.toLowerCase() === rawTitle.toLowerCase())
             const rawHours = parseInt(String(item.duration ?? '').replace(/[^\d]/g, ''), 10)
+            const pool = categorySkillPool[item.category] ?? categorySkillPool['Development & Tech']
+            const pick = (offset: number) => pool[(Number(item.id) + offset) % pool.length]
             return {
               id: item.id,
               title: rawTitle,
@@ -647,10 +1505,11 @@ export function LandingPage() {
               hours: localMatch?.hours || (!Number.isNaN(rawHours) && rawHours > 10 ? rawHours : 24),
               lessons: item.lessons?.length || item.lessons_count || 0,
               category: item.category || 'Development & Tech',
-              image: item.thumbnail || 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=600&h=340&fit=crop',
+              image: item.thumbnail || courseFallbackImages[Math.abs(Number(item.id) - 1) % courseFallbackImages.length],
               tags: item.tags?.length ? item.tags : ['All Levels'],
-              skills: Array.isArray(item.skills) && item.skills.length ? item.skills.slice(0, 3) : ['Beginner Friendly', 'Practical', 'Project-Based'],
-              level: item.level || 'Beginner',
+              skills: localMatch?.skills?.slice(0, 3)
+                || (Array.isArray(item.skills) && item.skills.length ? item.skills.slice(0, 3) : [pick(0), pick(1), pick(2)]),
+              level: item.level ? String(item.level).charAt(0).toUpperCase() + String(item.level).slice(1).toLowerCase() : 'Beginner',
               updated: item.updated_at ? `Updated ${new Date(item.updated_at).toLocaleString('en', { month: 'short' })} ${new Date(item.updated_at).getFullYear()}` : 'Updated 2026',
               feature: item.feature || 'Certificate Included',
               duration: hoursToMonths(item.duration, rawTitle),
@@ -668,7 +1527,7 @@ export function LandingPage() {
   const filteredAndSortedCourses = useMemo(() => {
     const items = allCourses.filter((c: any) => {
       const price = Number(c.price) || 0
-      const catOk = activeCategory === 'All' || String(c.category || 'General').trim() === activeCategory
+      const catOk = activeCategory === 'All' || String(c.category || 'General').trim().toLowerCase() === activeCategory.toLowerCase()
       let priceOk = true
       if (priceRange !== 'All') {
         const m = priceRange.match(/^(\d+)to(\d+)$/)
@@ -680,14 +1539,24 @@ export function LandingPage() {
           priceOk = false
         }
       }
-      const levelOk = levelFilter === 'All' || String(c.level || '').trim() === levelFilter
+      const levelOk = levelFilter === 'All' || String(c.level || '').trim().toLowerCase() === levelFilter.toLowerCase()
       const q = searchQuery.trim().toLowerCase()
       const searchOk = !q
         || String(c.title || '').toLowerCase().includes(q)
         || String(c.instructor || '').toLowerCase().includes(q)
         || String(c.category || '').toLowerCase().includes(q)
         || String(Array.isArray(c.skills) ? c.skills.join(' ') : '').toLowerCase().includes(q)
-      return catOk && priceOk && levelOk && searchOk
+      const tagOk = activeTags.length === 0
+        || activeTags.every((t) => {
+          const hay = [
+            ...(Array.isArray(c.skills) ? c.skills : []),
+            ...(Array.isArray(c.tags) ? c.tags : []),
+            String(c.category || ''),
+            String(c.title || ''),
+          ].join(' ').toLowerCase()
+          return hay.includes(t.toLowerCase())
+        })
+      return catOk && priceOk && levelOk && searchOk && tagOk
     })
     return items.sort((a: any, b: any) => {
       switch (sortOrder) {
@@ -698,9 +1567,9 @@ export function LandingPage() {
         default: return (Number(b.students) || 0) - (Number(a.students) || 0)
       }
     })
-  }, [allCourses, activeCategory, priceRange, levelFilter, searchQuery, sortOrder])
+  }, [allCourses, activeCategory, priceRange, levelFilter, searchQuery, sortOrder, activeTags])
 
-  const pageSize = 6
+  const pageSize = 12
   const totalPages = Math.max(1, Math.ceil(filteredAndSortedCourses.length / pageSize))
   const effectivePage = Math.min(coursePage, totalPages)
   const paginatedCourses = filteredAndSortedCourses.slice((effectivePage - 1) * pageSize, effectivePage * pageSize)
@@ -710,6 +1579,7 @@ export function LandingPage() {
     setPriceRange('All')
     setLevelFilter('All')
     setSearchQuery('')
+    setActiveTags([])
   }
 
   const categoryOptions = useMemo(() => {
@@ -719,13 +1589,23 @@ export function LandingPage() {
       counts[k] = (counts[k] || 0) + 1
     })
     const allCount = Object.values(counts).reduce((a, b) => a + b, 0)
+    const known = Object.entries(categoryIconMap)
+    const extra = Object.keys(counts)
+      .filter((k) => !(k in categoryIconMap))
+      .sort()
     return [
       { key: 'All', label: 'All Courses', icon: LayoutGrid, count: allCount },
-      ...Object.entries(categoryIconMap).map(([key, icon]) => ({
+      ...known.map(([key, icon]) => ({
         key,
         label: key,
         icon,
         count: counts[key] || 0,
+      })),
+      ...extra.map((key) => ({
+        key,
+        label: key,
+        icon: Target,
+        count: counts[key],
       })),
     ]
   }, [allCourses])
@@ -738,31 +1618,177 @@ export function LandingPage() {
     setPriceRange(key)
   }
 
-  const dynamicStats = useMemo(() => {
-    const src = apiCourses && apiCourses.length > 0 ? apiCourses : courses
+  const careerTagOptions = useMemo(() => {
+    const counts: Record<string, number> = {}
+    const ignore = new Set(['all levels', 'beginner friendly', 'practical', 'project-based'])
+    allCourses.forEach((c: any) => {
+      const items = [...(Array.isArray(c.skills) ? c.skills : []), ...(Array.isArray(c.tags) ? c.tags : [])]
+      items.forEach((s: string) => {
+        const k = String(s).trim()
+        if (!k || ignore.has(k.toLowerCase())) return
+        counts[k] = (counts[k] || 0) + 1
+      })
+    })
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([label, count]) => ({ label, count }))
+  }, [allCourses])
 
-    const uniqueInstructors = new Set(
-      src.map((c: any) => String(c.instructor || 'Instructor').trim().toLowerCase())
-    ).size
+  const toggleTag = (tag: string) => {
+    setActiveTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])
+  }
 
-    const lessonsTotal = src.reduce((acc: number, c: any) => acc + (Number(c.lessons) || 0), 0)
-    const hoursTotal = src.reduce((acc: number, c: any) => acc + (Number(c.hours) || 0), 0)
+  const activeFilterCount =
+    (activeCategory !== 'All' ? 1 : 0)
+    + (priceRange !== 'All' ? 1 : 0)
+    + (levelFilter !== 'All' ? 1 : 0)
+    + (searchQuery.trim() ? 1 : 0)
+    + activeTags.length
 
-    const uniqueCategories = new Set(
-      src.map((c: any) => String(c.category || 'General').trim()).filter(Boolean)
-    ).size
+  const renderFilters = (inDrawer = false) => (
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="rounded-xl border border-[#E8E4DD] bg-white p-4 shadow-[0_4px_18px_-10px_rgba(31,77,58,0.25)]">
+        <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#1F4D3A]">Search</p>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 w-4 h-4 -translate-y-1/2 text-[#9AA7A0]" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search courses..."
+            className="w-full h-10 rounded-lg border border-[#E8E4DD] bg-[#FAF8F4] pl-9 pr-3 text-[13px] font-medium text-[#1F4D3A] placeholder:text-[#9AA7A0] focus:outline-none focus:ring-2 focus:ring-[#E07B22]/20 focus:border-[#E07B22]/50 transition-all"
+          />
+        </div>
+      </div>
 
-    const studentsTotal = src.reduce((acc: number, c: any) => acc + (Number(c.students) || 0), 0)
+      {/* Categories */}
+      <div className="rounded-xl border border-[#E8E4DD] bg-white p-4 shadow-[0_4px_18px_-10px_rgba(31,77,58,0.25)]">
+        <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#1F4D3A]">Categories</p>
+        <div className="space-y-1.5">
+          {categoryOptions.map((cat) => {
+            const isActive = activeCategory === cat.key
+            const label = sidebarCategoryLabels[cat.key] ?? cat.label
+            return (
+              <button
+                key={cat.key}
+                type="button"
+                onClick={() => selectCategory(cat.key)}
+                className={cn(
+                  'w-full inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] font-semibold transition-all duration-200 border',
+                  isActive
+                    ? 'bg-[#E07B22] text-white border-[#E07B22] shadow-[0_6px_16px_-8px_rgba(224,123,34,0.6)]'
+                    : 'bg-white text-[#5A6B63] border-[#EEE9E0] hover:border-[#E07B22]/40 hover:text-[#E07B22] hover:bg-[#FFF4E9]'
+                )}
+              >
+                <cat.icon className={cn('w-3.5 h-3.5 shrink-0', isActive ? 'text-white' : 'text-[#E07B22]')} strokeWidth={2} />
+                <span className="truncate">{label}</span>
+                <span className={cn(
+                  'ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md shrink-0 tabular-nums',
+                  isActive ? 'bg-white/20 text-white' : 'bg-[#F3F0E8] text-[#8B94A8]'
+                )}>
+                  {cat.count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-    const fmt = (n: number) => (n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K+' : n + '+')
+      {/* Price */}
+      <div className="rounded-xl border border-[#E8E4DD] bg-white p-4 shadow-[0_4px_18px_-10px_rgba(31,77,58,0.25)]">
+        <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#1F4D3A]">Price</p>
+        <div className="space-y-1.5">
+          {sidebarPriceOptions.map((opt) => {
+            const isActive = priceRange === opt.key
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => selectPriceRange(opt.key)}
+                className={cn(
+                  'w-full inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] font-semibold transition-all duration-200 border',
+                  isActive
+                    ? 'bg-[#E07B22] text-white border-[#E07B22] shadow-[0_6px_16px_-8px_rgba(224,123,34,0.6)]'
+                    : 'bg-white text-[#5A6B63] border-[#EEE9E0] hover:border-[#E07B22]/40 hover:text-[#E07B22] hover:bg-[#FFF4E9]'
+                )}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-    return {
-      instructors: uniqueInstructors > 0 ? `${uniqueInstructors}+` : smarterStats[0].value,
-      videoLessons: lessonsTotal > 0 ? `${lessonsTotal}+` : hoursTotal > 0 ? `${hoursTotal}+` : smarterStats[1].value,
-      learningPaths: uniqueCategories > 0 ? `${uniqueCategories}+` : smarterStats[2].value,
-      activeLearners: studentsTotal > 0 ? fmt(studentsTotal) : smarterStats[3].value,
-    }
-  }, [apiCourses])
+      {/* Tags */}
+      {careerTagOptions.length > 0 && (
+        <div className="rounded-xl border border-[#E8E4DD] bg-white p-4 shadow-[0_4px_18px_-10px_rgba(31,77,58,0.25)]">
+          <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#1F4D3A]">Tags</p>
+          <div className="space-y-1">
+            {careerTagOptions.map((tag) => {
+              const checked = activeTags.includes(tag.label)
+              return (
+                <button
+                  key={tag.label}
+                  type="button"
+                  onClick={() => toggleTag(tag.label)}
+                  className="w-full inline-flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-[#5A6B63] hover:text-[#1F4D3A] transition-colors"
+                >
+                  <span className={cn(
+                    'w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all duration-200',
+                    checked ? 'bg-[#E07B22] border-[#E07B22] text-white' : 'bg-white border-[#D9D2C4]'
+                  )}>
+                    {checked && <Check className="w-3 h-3" strokeWidth={3} />}
+                  </span>
+                  <span className="truncate">{tag.label}</span>
+                  <span className="ml-auto text-[10px] font-bold text-[#9AA7A0] tabular-nums shrink-0">{tag.count}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Skill Level */}
+      <div className="rounded-xl border border-[#E8E4DD] bg-white p-4 shadow-[0_4px_18px_-10px_rgba(31,77,58,0.25)]">
+        <p className="mb-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#1F4D3A]">Skill Level</p>
+        <div className="space-y-1">
+          {levelOptions.filter((o) => o.key !== 'All').map((opt) => {
+            const checked = levelFilter === opt.key
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setLevelFilter(checked ? 'All' : opt.key as any)}
+                className="w-full inline-flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12.5px] font-medium text-[#5A6B63] hover:text-[#1F4D3A] transition-colors"
+              >
+                <span className={cn(
+                  'w-4 h-4 rounded-[5px] border flex items-center justify-center shrink-0 transition-all duration-200',
+                  checked ? 'bg-[#E07B22] border-[#E07B22] text-white' : 'bg-white border-[#D9D2C4]'
+                )}>
+                  {checked && <Check className="w-3 h-3" strokeWidth={3} />}
+                </span>
+                <span>{opt.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          resetAllFilters()
+          if (inDrawer) setFiltersOpen(false)
+        }}
+        className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-[#E8E4DD] bg-white px-4 py-2.5 text-[12.5px] font-bold text-[#E07B22] hover:bg-[#FFF4E9] hover:border-[#E07B22]/50 transition-all duration-200 active:scale-[0.98]"
+      >
+        <RefreshCw className="w-3.5 h-3.5" />
+        Reset All Filters
+      </button>
+    </div>
+  )
 
   const toggleBookmark = (id: number) => {
     setBookmarked((prev) => {
@@ -775,7 +1801,12 @@ export function LandingPage() {
   const scrollTo = (id: string) => {
     setMobileOpen(false)
     const el = document.getElementById(id)
-    if (el) el.scrollIntoView({ behavior: 'smooth' })
+    if (!el) return
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo(el, { duration: 1.2, offset: -92 })
+    } else {
+      el.scrollIntoView({ behavior: 'smooth' })
+    }
   }
 
   const handleHeroTilt = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -830,117 +1861,265 @@ export function LandingPage() {
     <div className="min-h-screen bg-white text-brand-600 font-inter">
       {/* Navbar */}
       <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className={cn(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-          scrolled
-            ? 'bg-white/95 backdrop-blur-md shadow-sm shadow-slate-900/5'
-            : 'bg-white/95 backdrop-blur-md border-b border-[#E9E7F5]'
-        )}
+        initial={{ y: -120, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 120, damping: 18, delay: 0.05 }}
+        className="fixed top-0 left-0 right-0 z-50"
       >
-        <Container size="lg" className="py-2">
-          <div className="flex items-center justify-between h-14">
-            {/* Logo */}
-            <Link href="/" className="flex items-center group" aria-label="Learn2Earn">
-              <motion.div
-                className="relative"
-                animate={{ y: [0, -1, 0] }}
-                transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
-              >
-                <Image
-                  src="/learn2earn-logo.png"
-                  alt="Learn2Earn"
-                  width={500}
-                  height={158}
-                  priority
-                  className="h-9 sm:h-10 w-auto object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.03]"
-                />
-              </motion.div>
-            </Link>
+        <Container size="xl" className="pt-3 pb-2.5">
+          {/* Aurora Glass Bar */}
+          <div className={cn('nav-aurora', scrolled && 'is-scrolled')}>
+            <div className="nav-shell px-4 sm:px-6">
+              <span className="nav-shine" aria-hidden="true" />
+              <div className="relative flex items-center justify-between h-[68px] sm:h-[76px]">
+                {/* Logo */}
+                <Link href="/" className="flex items-center group w-[55%] sm:w-[45%] xl:w-auto" aria-label="Learn2Earn">
+                  <motion.div
+                    className="relative w-full sm:w-auto"
+                    animate={{ y: [0, -1.5, 0] }}
+                    transition={{ repeat: Infinity, duration: 4.5, ease: 'easeInOut' }}
+                  >
+                    <Image
+                      src="https://plain-apac-prod-public.komododecks.com/202609/24/QvqonU8iVHyTE9fh3hih/image.png"
+                      alt="Learn2Earn"
+                      width={192}
+                      height={58}
+                      priority
+                      className="h-11 sm:h-[52px] w-full sm:w-auto object-contain rounded-2xl drop-shadow-sm transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                  </motion.div>
+                </Link>
 
-            {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-0.5">
-              {navLinks.map((link) => (
+                {/* Desktop Nav */}
+                <div className="hidden xl:flex items-center gap-1">
+                  {navLinks.map((link) => {
+                    const isAnchor = link.href.startsWith('#')
+                    const isActive = isAnchor && activeSection === link.href.slice(1)
+
+                    if (link.label === 'Courses') {
+                      return (
+                        <div
+                          key={link.label}
+                          className="relative"
+                          onMouseEnter={() => setCoursesDropdownOpen(true)}
+                          onMouseLeave={() => setCoursesDropdownOpen(false)}
+                        >
+                          <button
+                            onClick={() => scrollTo('courses')}
+                            className={cn(
+                              'nav-link px-4 py-2 rounded-[11px] font-medium transition-colors duration-200 inline-flex items-center gap-1',
+                              isActive ? 'text-[#F47B20]' : 'text-[#1A1A1A] hover:text-[#F47B20]'
+                            )}
+                            aria-expanded={coursesDropdownOpen}
+                            aria-haspopup="menu"
+                          >
+                            {isActive && (
+                              <motion.span
+                                layoutId="nav-active-pill"
+                                className="nav-link-pill"
+                                transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                              />
+                            )}
+                            {link.label}
+                            <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', coursesDropdownOpen && 'rotate-180')} />
+                          </button>
+                          <AnimatePresence>
+                            {coursesDropdownOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                                transition={{ duration: 0.18, ease: 'easeOut' }}
+                                className="absolute left-1/2 -translate-x-1/2 top-full pt-3 w-56"
+                                role="menu"
+                              >
+                                <div className="rounded-2xl border border-[#F0EAE0] bg-white/95 shadow-[0_18px_40px_-18px_rgba(31,45,61,0.35)] backdrop-blur-xl overflow-hidden p-2">
+                                  {navCoursesDropdownItems.map((item) => (
+                                    <button
+                                      key={item.label}
+                                      type="button"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setActiveCategory(item.key)
+                                        setActiveTags([])
+                                        setCoursesDropdownOpen(false)
+                                        scrollTo('courses')
+                                      }}
+                                      className="group/item w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left hover:bg-[#FDF0E5] transition-colors"
+                                    >
+                                      <span className={cn('w-2 h-2 rounded-full shrink-0', item.color)} />
+                                      <span className="text-[13px] font-medium text-[#1A1A1A] group-hover/item:text-[#F47B20] transition-colors">{item.label}</span>
+                                      <ArrowRight className="ml-auto w-3.5 h-3.5 text-[#8B94A8] opacity-0 -translate-x-1 group-hover/item:opacity-100 group-hover/item:translate-x-0 transition-all duration-200" />
+                                    </button>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <button
+                        key={link.label}
+                        onClick={() => link.href.startsWith('#') ? scrollTo(link.href.slice(1)) : router.push(link.href)}
+                        className={cn(
+                          'nav-link px-4 py-2 rounded-[11px] font-medium transition-colors duration-200',
+                          isActive ? 'text-[#F47B20]' : 'text-[#1A1A1A] hover:text-[#F47B20]'
+                        )}
+                      >
+                        {isActive && (
+                          <motion.span
+                            layoutId="nav-active-pill"
+                            className="nav-link-pill"
+                            transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                          />
+                        )}
+                        {link.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Desktop Right */}
+                <div className="hidden xl:flex items-center gap-3">
+                  <Link href="/login" className="landing-control-frame">
+                    <button
+                      className={cn(
+                        'landing-control-reset h-10 px-5 rounded-xl border-[1.5px] border-[#F47B20] whitespace-nowrap',
+                        'bg-white text-[#F47B20] hover:bg-[#FDF0E5]',
+                        'font-semibold text-sm transition-all active:scale-[0.98]'
+                      )}
+                    >
+                      Sign In
+                    </button>
+                  </Link>
+                  <Link href="/signup">
+                    <button
+                      className={cn(
+                        'nav-cta h-10 px-5 rounded-xl whitespace-nowrap',
+                        'bg-gradient-to-r from-[#F47B20] to-[#E8630A] text-white',
+                        'shadow-[0_10px_22px_-10px_rgba(244,123,32,0.85)] hover:shadow-[0_14px_26px_-10px_rgba(244,123,32,0.95)]',
+                        'font-semibold text-sm transition-all active:scale-[0.98]'
+                      )}
+                    >
+                      Get Started
+                    </button>
+                  </Link>
+                </div>
+
+                {/* Mobile Toggle */}
                 <button
-                  key={link.label}
-                  onClick={() => link.href.startsWith('#') ? scrollTo(link.href.slice(1)) : router.push(link.href)}
-                    className={cn(
-                      'px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200',
-                      'text-[#536078] hover:text-[#6D3DF5] hover:bg-[#F3EEFF]'
-                    )}
+                  onClick={() => setMobileOpen(!mobileOpen)}
+                  className={cn(
+                    'xl:hidden p-2 rounded-xl transition-colors',
+                    'text-[#0F1B3D] hover:bg-[#F3EEFF]'
+                  )}
                 >
-                  {link.label}
+                  {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </button>
-              ))}
+              </div>
             </div>
-
-            {/* Desktop Right */}
-            <div className="hidden lg:flex items-center gap-3">
-                <Link href="/login">
-                <button className={cn(
-                  'h-9 px-5 rounded-lg font-medium text-sm transition-all active:scale-[0.98]',
-                  'bg-[#6D3DF5] hover:bg-[#5B2FE0] text-white shadow-sm'
-                )}>
-                  Sign In
-                </button>
-              </Link>
-              <Link href="/signup">
-                <button                 className="h-9 px-5 rounded-lg bg-gradient-to-r from-[#6D3DF5] to-[#3478F6] hover:from-[#5B2FE0] hover:to-[#2B66E0] text-white font-medium text-sm transition-all active:scale-[0.98]">
-                  Get Started
-                </button>
-              </Link>
-            </div>
-
-            {/* Mobile Toggle */}
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className={cn(
-                'lg:hidden p-2 rounded-lg transition-colors',
-                'text-[#0F1B3D]'
-              )}
-            >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </Container>
+
 
         {/* Mobile Menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="lg:hidden bg-white border-t border-[#E9E7F5] overflow-hidden"
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="xl:hidden px-4 sm:px-6"
             >
-              <div className="px-6 py-4 space-y-1">
-                  {navLinks.map((link) => (
-                  <button
-                    key={link.label}
-                    onClick={() => {
-                      if (link.href.startsWith('#')) {
-                        scrollTo(link.href.slice(1))
-                      } else {
-                        router.push(link.href)
-                      }
-                      setMobileOpen(false)
-                    }}
-                    className="block w-full text-left px-4 py-2.5 rounded-lg text-[#536078] hover:text-[#6D3DF5] hover:bg-[#F3EEFF] font-medium transition-colors text-sm"
-                  >
-                    {link.label}
-                  </button>
-                ))}
+              <div className="nav-shell mt-1 rounded-3xl border border-[#F0EAE0] px-4 py-4 shadow-[0_10px_24px_-20px_rgba(31,45,61,0.35)] max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain">
+                <div className="space-y-1">
+                  {navLinks.map((link) => {
+                    const isActive = link.href.startsWith('#') && activeSection === link.href.slice(1)
+                    if (link.label === 'Courses') {
+                      return (
+                        <div key={link.label}>
+                          <button
+                            onClick={() => {
+                              setMobileCoursesOpen((o) => !o)
+                              scrollTo('courses')
+                            }}
+                            className={cn(
+                              'block w-full text-left px-4 py-2.5 rounded-xl font-medium transition-colors text-sm inline-flex items-center gap-1',
+                              isActive
+                                ? 'text-[#F47B20] bg-gradient-to-r from-[#F47B20]/12 to-[#6D3DF5]/12'
+                                : 'text-[#536078] hover:text-[#F47B20] hover:bg-[#FDF0E5]'
+                            )}
+                          >
+                            {link.label}
+                            <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', mobileCoursesOpen && 'rotate-180')} />
+                          </button>
+                          <AnimatePresence initial={false}>
+                            {mobileCoursesOpen && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.22, ease: 'easeOut' }}
+                                className="overflow-hidden"
+                              >
+                                <div className="ml-3 mt-1 border-l-2 border-[#F47B20]/25 pl-3 space-y-0.5">
+                                  {navCoursesDropdownItems.map((item) => (
+                                    <button
+                                      key={item.label}
+                                      onClick={() => {
+                                        setActiveCategory(item.key)
+                                        setActiveTags([])
+                                        setMobileOpen(false)
+                                        scrollTo('courses')
+                                      }}
+                                      className="block w-full text-left px-4 py-2 rounded-lg text-[13px] font-medium text-[#536078] hover:text-[#F47B20] hover:bg-[#FDF0E5] transition-colors inline-flex items-center gap-2"
+                                    >
+                                      <span className={cn('w-2 h-2 rounded-full shrink-0', item.color)} />
+                                      {item.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )
+                    }
+                    return (
+                      <button
+                        key={link.label}
+                        onClick={() => {
+                          if (link.href.startsWith('#')) {
+                            scrollTo(link.href.slice(1))
+                          } else {
+                            router.push(link.href)
+                          }
+                          setMobileOpen(false)
+                        }}
+                        className={cn(
+                          'block w-full text-left px-4 py-2.5 rounded-xl font-medium transition-colors text-sm',
+                          isActive
+                            ? 'text-[#F47B20] bg-gradient-to-r from-[#F47B20]/12 to-[#6D3DF5]/12'
+                            : 'text-[#536078] hover:text-[#F47B20] hover:bg-[#FDF0E5]'
+                        )}
+                      >
+                        {link.label}
+                      </button>
+                    )
+                  })}
+                </div>
                 <div className="pt-3 space-y-2">
-                  <Link href="/login" className="block">
-                    <button className="w-full h-10 rounded-lg bg-gradient-to-r from-[#6D3DF5] to-[#3478F6] hover:from-[#5B2FE0] hover:to-[#2B66E0] text-white font-medium text-sm transition-all">
+                  <Link href="/login" className="landing-control-frame block">
+                    <button className="landing-control-reset w-full h-11 rounded-xl border-[1.5px] border-[#F47B20] text-[#F47B20] bg-white font-semibold text-sm transition-all active:scale-[0.98]">
                       Sign In
                     </button>
                   </Link>
                   <Link href="/signup" className="block">
-                    <button className="w-full h-10 rounded-lg bg-gradient-to-r from-[#6D3DF5] to-[#3478F6] hover:from-[#5B2FE0] hover:to-[#2B66E0] text-white font-medium text-sm transition-all">
+                    <button className="nav-cta w-full h-11 rounded-xl bg-gradient-to-r from-[#F47B20] to-[#E8630A] text-white font-semibold text-sm shadow-[0_12px_24px_-12px_rgba(244,123,32,0.9)] transition-all active:scale-[0.98]">
                       Get Started
                     </button>
                   </Link>
@@ -952,159 +2131,111 @@ export function LandingPage() {
       </motion.nav>
 
       {/* Hero Section */}
-      <section id="home" className="relative overflow-hidden bg-white font-inter">
-        {/* Background: soft light glows + abstract shapes */}
-        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-          <div className="absolute -top-40 -right-32 w-[640px] h-[640px] rounded-full bg-[#7C5CFC]/[0.10] blur-3xl" />
-          <div className="absolute -bottom-44 -left-32 w-[560px] h-[560px] rounded-full bg-[#3B82F6]/[0.10] blur-3xl" />
-          <div className="absolute top-1/4 left-1/3 w-80 h-80 rounded-full bg-[#2DD4BF]/[0.12] blur-3xl" />
-          <div className="absolute top-24 right-[7%] w-20 h-20 rounded-2xl bg-violet-200/50 rotate-12" />
-          <div className="absolute bottom-24 left-[4%] w-14 h-14 rounded-full border-2 border-blue-200/70" />
-          <div className="absolute top-1/2 right-[15%] w-24 h-24 rounded-full bg-teal-100/60" />
-        </div>
-
-        <Container size="xl" className="relative pt-24 lg:pt-28 pb-14 lg:pb-16">
-          <div className="grid lg:grid-cols-2 gap-16 lg:gap-14 items-center">
-            {/* Left Content */}
+      <section id="home" className="hero relative overflow-hidden">
+        <Container size="xl" className="hero-container relative">
+          <div className="hero-grid">
+            {/* Left - Text column */}
             <motion.div
               variants={staggerContainer}
               initial="hidden"
               animate="visible"
-              className="max-w-xl mx-auto lg:mx-0 text-center lg:text-left"
+              className="hero-text-col"
             >
-              {/* Badge */}
-              <motion.div
-                variants={fadeUp}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-violet-50 border border-violet-200/70 mb-6 shadow-sm shadow-slate-900/5"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-violet-500" />
-                <span className="text-[11px] font-semibold tracking-[0.18em] text-violet-700 uppercase">All-in-One Learning Hub</span>
+              {/* Top badge */}
+              <motion.div variants={fadeUp} className="hero-badge">
+                <span className="hero-avatar-stack">
+                  <img className="hero-avatar hero-avatar-a" src="https://randomuser.me/api/portraits/men/32.jpg" alt="" width={26} height={26} loading="lazy" />
+                  <img className="hero-avatar hero-avatar-b" src="https://randomuser.me/api/portraits/women/44.jpg" alt="" width={26} height={26} loading="lazy" />
+                  <img className="hero-avatar hero-avatar-c" src="https://randomuser.me/api/portraits/men/75.jpg" alt="" width={26} height={26} loading="lazy" />
+                </span>
+                <span className="hero-badge-divider" aria-hidden="true" />
+                <span className="hero-badge-text">
+                  Loved by <strong>20K+ Learners</strong>
+                </span>
               </motion.div>
 
-              {/* 3-line headline */}
-              <motion.h1
-                variants={fadeUp}
-                className="text-[30px] sm:text-[42px] lg:text-[48px] font-extrabold leading-[1.12] tracking-tight mb-6"
-              >
-                <span className="text-[#0B1F3F]">Learn Skills.</span>
+              {/* Headline */}
+              <motion.h1 variants={fadeUp} className="hero-title">
+                Learn <span className="accent">skills.</span>
                 <br />
-                <span className="bg-gradient-to-r from-[#6D28D9] to-[#3B82F6] bg-clip-text text-transparent">Build Projects.</span>
-                <br />
-                <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">Start Earning.</span>
+                Build your <span className="accent">future.</span>
               </motion.h1>
 
               {/* Description */}
-              <motion.p
-                variants={fadeUp}
-                className="text-[15px] sm:text-base text-slate-500 leading-relaxed mb-8 max-w-md mx-auto lg:mx-0"
-              >
+              <motion.p variants={fadeUp} className="hero-sub">
                 Learn practical skills, build real-world projects, grow your portfolio, and turn your knowledge into real earning opportunities.
               </motion.p>
 
-              {/* CTAs */}
-              <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 mb-9">
-                <button
-                  data-magnet
-                  type="button"
-                  onClick={() => scrollTo('courses')}
-                  className="group w-full sm:w-auto h-11 px-6 rounded-xl bg-gradient-to-r from-[#6D28D9] to-[#4F46E5] hover:from-[#5B21B6] hover:to-[#4338CA] text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  Start Learning Now
-                  <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+              {/* Search bar */}
+              <motion.form
+                variants={fadeUp}
+                className="hero-search"
+                role="search"
+                onSubmit={(e) => { e.preventDefault(); scrollTo('courses') }}
+              >
+                <Search className="hero-search-icon" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search skills, courses, and tools..."
+                  aria-label="Search courses, skills, and tools"
+                />
+                <button type="submit" className="hero-search-btn" aria-label="Search courses">
+                  <ArrowUpRight className="hero-search-arrow" />
                 </button>
-                <button
-                  data-magnet
-                  type="button"
-                  onClick={() => setDemoOpen(true)}
-                  className="group w-full sm:w-auto h-11 px-6 rounded-xl bg-white border border-slate-200 hover:border-violet-300 hover:bg-violet-50/60 text-slate-700 font-semibold text-sm transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <span className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center group-hover:bg-violet-200 transition-colors">
-                    <Play className="w-3 h-3 text-violet-600" fill="currentColor" />
-                  </span>
-                  Watch Demo
-                </button>
-              </motion.div>
+              </motion.form>
 
-              {/* Trust stats */}
-              <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
-                {[
-                  { v: '10K+', l: 'Active Learners', icon: Users, c: 'text-[#6D28D9]', bg: 'bg-violet-50', ring: 'ring-violet-100', shadow: 'shadow-sm shadow-slate-900/5' },
-                  { v: '500+', l: 'Courses', icon: BookOpen, c: 'text-[#2563EB]', bg: 'bg-blue-50', ring: 'ring-blue-100', shadow: 'shadow-sm shadow-slate-900/5' },
-                  { v: '95%', l: 'Success Rate', icon: TrendingUp, c: 'text-emerald-600', bg: 'bg-emerald-50', ring: 'ring-emerald-100', shadow: 'shadow-sm shadow-slate-900/5' },
-                ].map((s) => (
-                  <div
-                    key={s.l}
-                    className={cn('group flex items-center gap-3 rounded-2xl bg-white/90 backdrop-blur-sm border border-slate-100 px-3.5 py-2.5 ring-1 ring-black/[0.02] transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98]', s.shadow)}
-                  >
-                    <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center ring-1 shrink-0', s.bg, s.ring)}>
-                      <s.icon className={cn('w-4 h-4', s.c)} strokeWidth={2.2} />
-                    </div>
-                    <div className="text-left">
-                      <p className={cn('text-[20px] sm:text-[22px] font-extrabold leading-none tracking-tight tabular-nums', s.c)}>{s.v}</p>
-                      <p className="text-[11px] font-medium text-slate-400 mt-1.5 whitespace-nowrap leading-none">{s.l}</p>
-                    </div>
-                  </div>
-                ))}
+              {/* Category chips */}
+              <motion.div variants={fadeUp} className="hero-chips">
+{heroFilterChips.map((c) => {
+                  const ChipIcon = c.icon
+                  return (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => { setActiveCategory(c.key); scrollTo('courses') }}
+                      className={cn('hero-chip', activeCategory === c.key && 'hero-chip-active')}
+                    >
+                      <ChipIcon className="hero-chip-icon" />
+                      {c.label}
+                    </button>
+                  )
+                })}
               </motion.div>
             </motion.div>
 
-            {/* Right - Hero image */}
+            {/* Right - Animated Image */}
             <motion.div
               initial={{ opacity: 0, y: 26, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: 'spring', stiffness: 70, damping: 14, delay: 0.15 }}
-              className="relative w-full max-w-[560px] mx-auto"
+              className="hero-visual"
             >
-              {/* Levitating framed card with spring 3D tilt */}
               <motion.div
-                animate={prefersReducedMotion ? { y: 0, rotate: 0 } : { y: [0, -10, 0], rotate: [0, 0.6, 0] }}
-                transition={prefersReducedMotion ? {} : { duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative"
+                style={{ rotateX: tiltX, rotateY: tiltY, transformPerspective: 1400, transformStyle: 'preserve-3d' }}
                 onMouseMove={handleHeroTilt}
                 onMouseLeave={resetHeroTilt}
+                className="hero-panel-tilt"
               >
-                {/* Soft contact shadow (parallax with tilt) */}
-                <div className="absolute left-1/2 -bottom-7 w-[80%] -translate-x-1/2" aria-hidden="true">
+                <div className="hero-cutout-wrap">
+                  <div className="hero-glow" aria-hidden="true" />
                   <motion.div
-                    style={{ x: shadowShiftX }}
-                    className="h-8 rounded-[50%] bg-slate-600/25 blur-xl"
-                  />
-                </div>
-
-                {/* The frame - standard border design */}
-                <motion.div
-                  style={{ rotateX: tiltX, rotateY: tiltY, transformPerspective: 1400, transformStyle: 'preserve-3d' }}
-                  className="relative rounded-[2rem] border border-slate-200/80 bg-white/95 p-2.5 sm:p-3 shadow-sm shadow-slate-900/10 ring-1 ring-slate-900/5"
-                >
-                  {/* Top light accent */}
-                  <div className="absolute -inset-px rounded-[2rem] bg-gradient-to-b from-white/90 via-transparent to-transparent opacity-70 pointer-events-none" aria-hidden="true" />
-
-                  <div className="relative rounded-[1.5rem] overflow-hidden bg-gradient-to-br from-slate-50 via-white to-violet-50/40 p-4 sm:p-5">
-                    {/* Cinematic live-photo drift on the image */}
-                    <motion.div
-                      animate={prefersReducedMotion ? { scale: 1, x: 0, y: 0 } : { scale: [1, 1.05, 1], x: [0, -9, 0], y: [0, -7, 0] }}
-                      transition={prefersReducedMotion ? {} : { duration: 16, repeat: Infinity, ease: 'easeInOut' }}
-                      className="w-full h-auto"
-                    >
-                      <img
-                        src="https://i.ibb.co.com/dHhB7k2/Chat-GPT-Image-Aug-13-2026-08-58-18-PM-removebg-preview.png"
-                        alt="Student learning, building projects and earning illustration"
-                        className="w-full h-auto object-contain"
-                        loading="eager"
-                      />
-                    </motion.div>
-
-                    {/* Glass glare (parallax with tilt) */}
-                    <motion.div
-                      className="absolute inset-0 pointer-events-none rounded-[1.5rem] bg-gradient-to-br from-white/25 via-transparent to-white/10"
-                      style={{ x: sheenShiftX, y: sheenShiftY }}
-                      aria-hidden="true"
+                    animate={{ y: [0, -14, 0], rotate: [-1, 1, -1] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                    className="hero-cutout-float"
+                  >
+                    <img
+                      src="https://plain-apac-prod-public.komododecks.com/202609/24/TtKd0T8idvT1yNJAJBpd/image.jpg"
+                      alt="Student learning, building projects and earning illustration"
+                      className="hero-cutout"
+                      loading="eager"
                     />
-                  </div>
-                </motion.div>
+                    <span className="hero-shine" aria-hidden="true" />
+                  </motion.div>
+                </div>
               </motion.div>
             </motion.div>
-
           </div>
         </Container>
       </section>
@@ -1154,9 +2285,336 @@ export function LandingPage() {
 
 
       <style dangerouslySetInnerHTML={{__html: `
+        /* ---- Navbar - aurora glass design ---- */
+        .nav-aurora {
+          position: relative;
+          border-radius: 26px;
+          padding: 1.5px;
+          background: linear-gradient(115deg, #F47B20, #FFC08A, #6D3DF5, #34D399, #3478F6, #F47B20);
+          background-size: 300% 300%;
+          animation: nav-aurora 8s ease infinite;
+          box-shadow: 0 10px 26px -20px rgba(31, 45, 61, 0.28), 0 2px 8px -6px rgba(109, 61, 245, 0.16);
+          transition: box-shadow 0.4s ease, border-radius 0.4s ease;
+        }
+        .nav-aurora.is-scrolled {
+          border-radius: 22px;
+          box-shadow: 0 8px 20px -18px rgba(31, 45, 61, 0.32), 0 2px 8px -6px rgba(244, 123, 32, 0.18);
+        }
+        @keyframes nav-aurora {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .nav-shell {
+          position: relative;
+          border-radius: 24.5px;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 253, 249, 0.88));
+          backdrop-filter: blur(18px) saturate(170%);
+          -webkit-backdrop-filter: blur(18px) saturate(170%);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
+          overflow: visible;
+          font-family: 'Mona Sans', sans-serif;
+        }
+        .nav-shine {
+          position: absolute;
+          inset: 0;
+          border-radius: inherit;
+          overflow: hidden;
+          pointer-events: none;
+        }
+        .nav-shine::after {
+          content: '';
+          position: absolute;
+          top: -30%;
+          bottom: -30%;
+          left: 0;
+          width: 34%;
+          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+          transform: translateX(-180%) skewX(-18deg);
+          animation: nav-shine 6s ease-in-out infinite;
+        }
+        @keyframes nav-shine {
+          0% { transform: translateX(-180%) skewX(-18deg); }
+          55%, 100% { transform: translateX(420%) skewX(-18deg); }
+        }
+        .nav-link {
+          position: relative;
+          z-index: 1;
+          isolation: isolate;
+          font-family: 'Mona Sans', sans-serif;
+          font-size: 14px;
+        }
+        .nav-link::after {
+          content: '';
+          position: absolute;
+          left: 14px;
+          right: 14px;
+          bottom: 5px;
+          height: 2px;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #F47B20, #6D3DF5);
+          transform: scaleX(0);
+          transform-origin: left center;
+          transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+          pointer-events: none;
+        }
+        .nav-link:hover::after,
+        .nav-link[aria-expanded='true']::after {
+          transform: scaleX(1);
+        }
+        .nav-link-pill {
+          position: absolute;
+          inset: 0;
+          border-radius: 11px;
+          background: linear-gradient(120deg, rgba(244, 123, 32, 0.14), rgba(109, 61, 245, 0.14));
+          border: 1px solid rgba(244, 123, 32, 0.22);
+          z-index: -1;
+        }
+        .nav-cta {
+          position: relative;
+          overflow: hidden;
+        }
+        .nav-cta::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+          transform: translateX(-160%) skewX(-18deg);
+          transition: transform 0.7s ease;
+        }
+        .nav-cta:hover::after { transform: translateX(160%) skewX(-18deg); }
+        @media (prefers-reduced-motion: reduce) {
+          .nav-aurora, .nav-shine::after, .nav-cta::after { animation: none !important; }
+        }
+        /* ---- Hero - warm organic design ---- */
+        .hero {
+          background: var(--bg);
+          color: var(--heading);
+          font-family: var(--font-mona), sans-serif;
+          padding: 140px 0 120px;
+        }
+        .hero-container {
+          padding-top: 0;
+          padding-bottom: 0;
+        }
+        @media (min-width: 1024px) {
+          .hero-container { padding-top: 0; padding-bottom: 0; }
+        }
+        .hero-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 20px;
+          align-items: center;
+        }
+        @media (min-width: 1024px) {
+          .hero-grid { grid-template-columns: 55% 45%; gap: 16px; }
+        }
+
+        /* decorative background */
+        .hero-decor { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+        .hero-decor-ring, .hero-decor-arc { position: absolute; border-radius: 9999px; }
+        .hero-decor-ring-1 { width: 520px; height: 520px; left: -150px; top: -130px; border: 1px solid rgba(232,99,10,0.14); }
+        .hero-decor-ring-2 { width: 720px; height: 720px; right: -190px; bottom: -270px; border: 1px solid rgba(11,59,46,0.08); }
+        .hero-decor-arc-1 { width: 180px; height: 180px; left: 46%; top: -70px; border: 1.5px solid rgba(232,99,10,0.10); }
+        .hero-decor-arc-2 { width: 120px; height: 120px; right: 42%; bottom: -40px; border: 1.5px solid rgba(11,59,46,0.08); }
+        .hero-decor-dot { position: absolute; border-radius: 9999px; }
+        .hero-decor-dot-1 { width: 14px; height: 14px; right: 8%; top: 22%; background: rgba(232,99,10,0.14); }
+        .hero-decor-dot-2 { width: 10px; height: 10px; left: 11%; bottom: 17%; background: rgba(11,59,46,0.10); }
+
+        /* left column */
+        .hero-text-col { width: 100%; max-width: 560px; margin-inline: auto; text-align: center; }
+        @media (min-width: 1024px) {
+          .hero-text-col { margin-inline: 0; text-align: left; }
+        }
+
+        /* badge */
+        .hero-badge {
+          display: inline-flex; align-items: center; gap: 10px;
+          padding: 6px 14px 6px 6px; border-radius: 9999px;
+          background: var(--surface); border: 1px solid var(--border);
+          box-shadow: 0 14px 34px -22px rgba(11,59,46,0.4);
+          margin-bottom: 22px;
+        }
+        .hero-avatar-stack { display: flex; }
+        .hero-avatar {
+          width: 26px; height: 26px; border-radius: 9999px;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-size: 9px; font-weight: 600; color: #fff; letter-spacing: 0.02em;
+          border: 2px solid var(--surface); object-fit: cover;
+        }
+        .hero-avatar + .hero-avatar { margin-left: -8px; }
+        .hero-avatar-a { background: linear-gradient(135deg, #E8630A, #F2994A); }
+        .hero-avatar-b { background: linear-gradient(135deg, #0B3B2E, #2E8B6E); }
+        .hero-avatar-c { background: linear-gradient(135deg, #4B5563, #9CA3AF); }
+        .hero-badge-divider { width: 1px; height: 18px; background: var(--border); }
+        .hero-badge-text { font-size: 13px; font-weight: 500; color: #5A6B63; letter-spacing: 0.01em; }
+        .hero-badge-text strong { color: var(--accent); font-weight: 700; }
+
+        /* headline */
+        .hero-title {
+          font-family: 'Mona Sans', sans-serif;
+          font-size: 34px; font-weight: 600; line-height: 1.1;
+          letter-spacing: -0.02em; color: #0B3B2E; margin: 0 0 16px;
+        }
+        .hero-title .accent {
+          font-family: 'Instrument Serif', Georgia, serif;
+          font-style: italic; font-weight: 400;
+          color: #E8630A; font-size: 1.1em; line-height: 1.1;
+        }
+        @media (min-width: 640px) { .hero-title { font-size: 40px; } }
+        @media (min-width: 1024px) { .hero-title { font-size: 55px; } }
+
+        /* paragraph */
+        .hero-sub {
+          font-size: 16px; font-weight: 400; line-height: 1.6;
+          color: var(--text-muted); margin: 0 0 26px; max-width: 470px;
+          margin-inline: auto;
+        }
+        @media (min-width: 1024px) { .hero-sub { margin-inline: 0; } }
+
+        /* search bar */
+        .hero-search {
+          position: relative; display: flex; align-items: center;
+          background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+          box-shadow: 0 16px 38px -24px rgba(11,59,46,0.5);
+          max-width: 520px; margin-inline: auto; margin-bottom: 16px;
+        }
+        @media (min-width: 1024px) { .hero-search { margin-inline: 0; } }
+        .hero-search-icon {
+          position: absolute; left: 17px; top: 50%; transform: translateY(-50%);
+          width: 17px; height: 17px; color: #9AA7A0; pointer-events: none;
+        }
+        .hero-search input {
+          flex: 1; min-width: 0; height: 54px; padding: 0 62px 0 46px;
+          border: 0; outline: none; background: transparent;
+          font-size: 14px; font-weight: 500; color: var(--heading); font-family: inherit;
+        }
+        .hero-search input::placeholder { color: #9AA7A0; }
+        .hero-search-btn {
+          position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+          width: 40px; height: 40px; border: 0; border-radius: 10px;
+          background: var(--accent); color: #fff; cursor: pointer;
+          display: inline-flex; align-items: center; justify-content: center;
+          transition: background 0.2s ease, transform 0.2s ease;
+        }
+        .hero-search-btn:hover { background: #C95407; transform: translateY(-50%) scale(1.05); }
+        .hero-search-arrow { width: 19px; height: 19px; stroke-width: 2.5; }
+
+        /* category chips */
+        .hero-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+        @media (max-width: 639px) { .hero-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        .hero-chip {
+          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+          padding: 8px 14px; border-radius: 999px;
+          background: #EEF4EE; border: 1px solid #D5E2D6;
+          color: #0B3B2E; font-size: 12px; font-weight: 500; font-family: inherit;
+          cursor: pointer;
+          transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+        .hero-chip:hover { background: #E3EDE4; border-color: #C7DAC9; }
+        .hero-chip-active { background: #D6E9DA; border-color: #A9CDB0; color: #0B3B2E; }
+        .hero-chip-icon { width: 16px; height: 16px; stroke-width: 1.5; color: #0B3B2E; }
+
+        /* right visual */
+        .hero-visual { position: relative; width: 100%; max-width: 720px; margin-inline: auto; }
+        .hero-panel-tilt { position: relative; transform-style: preserve-3d; }
+        .hero-cutout-wrap { position: relative; z-index: 1; width: 100%; max-width: 700px; margin-inline: auto; }
+        .hero-cutout-float { position: relative; will-change: transform; }
+        .hero-cutout {
+          position: relative; z-index: 1;
+          width: 100%; height: auto; object-fit: contain;
+          display: block; border-radius: 20px;
+          filter: contrast(1.04) saturate(1.05);
+        }
+        @media (min-width: 1024px) { .hero-cutout-wrap { max-width: 720px; } }
+        .hero-glow {
+          position: absolute; left: 50%; top: 50%;
+          width: 60%; height: 60%;
+          transform: translate(-50%, -50%);
+          border-radius: 9999px; z-index: 0; pointer-events: none;
+          background: radial-gradient(circle, rgba(232,99,10,0.26) 0%, rgba(232,99,10,0.10) 55%, transparent 75%);
+          filter: blur(16px);
+          animation: hero-glow-pulse 5s ease-in-out infinite;
+        }
+        @keyframes hero-glow-pulse {
+          0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(0.94); }
+          50% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+        }
+        .hero-shine {
+          position: absolute; inset: 0; z-index: 2;
+          border-radius: 20px; overflow: hidden; pointer-events: none;
+        }
+        .hero-shine::after {
+          content: ''; position: absolute; top: -10%; bottom: -10%; width: 45%;
+          left: -65%;
+          background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,0.20) 50%, transparent 100%);
+          transform: skewX(-18deg);
+          animation: hero-shine-sweep 6.5s ease-in-out infinite;
+        }
+        @keyframes hero-shine-sweep {
+          0%, 28% { left: -65%; }
+          62%, 100% { left: 135%; }
+        }
+        .hero img {
+          color: transparent;
+          font-size: 0;
+        }
+        /* thin decorative outline circles, partly cut off by section edges */
+        .hero-outline {
+          position: absolute;
+          border: 1px solid #E8E4DC;
+          border-radius: 9999px;
+          background: none;
+          box-shadow: none;
+          z-index: 0;
+          pointer-events: none;
+        }
+        .hero-outline-1 { width: 700px; height: 700px; left: -190px; top: -250px; }
+        .hero-outline-2 { width: 520px; height: 520px; right: -170px; top: -140px; }
+        .hero-outline-3 { width: 300px; height: 300px; left: 7%; bottom: -110px; }
+        .hero-outline-4 { width: 200px; height: 200px; right: 20%; bottom: -70px; }
+        .hero-outline-5 { width: 430px; height: 430px; right: -150px; bottom: -190px; }
+
+        /* tagline */
+        .hero-tagline {
+          display: flex; align-items: center; justify-content: center; gap: 12px;
+          margin-top: 20px; text-transform: uppercase;
+          font-size: 11.5px; font-weight: 600; letter-spacing: 0.25em; color: var(--heading);
+        }
+        .hero-tagline i { width: 5px; height: 5px; border-radius: 9999px; background: var(--accent); }
+
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.33%); } }
-        .animate-marquee { animation: marquee 30s linear infinite; }
+        .animate-marquee { background: transparent; animation: marquee 30s linear infinite; }
         .animate-marquee:hover { animation-play-state: paused; }
+        .marquee-pill {
+          display: inline-flex; align-items: center; gap: 10px;
+          height: 80px; padding: 0 36px; border-radius: 999px;
+          border: 1px solid #E4DFD7; background: transparent;
+          font-family: 'Mona Sans', sans-serif;
+          font-size: 26px; font-weight: 500; color: #1B4D3E;
+          white-space: nowrap;
+        }
+        .marquee-num {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-style: italic; font-weight: 500;
+          font-size: 28px; color: #1B4D3E;
+        }
+        .marquee-num--alt { color: #D9701F; }
+        .marquee-sep {
+          width: 80px; height: 80px; border-radius: 9999px; flex: none;
+          border: 1px solid #E4DFD7;
+          display: inline-flex; align-items: center; justify-content: center;
+          background: transparent; overflow: hidden;
+        }
+        .marquee-sep-icon { width: 34px; height: 34px; color: #1B4D3E; stroke-width: 1.1; }
+        .marquee-sep img { width: 80px; height: 80px; border-radius: 9999px; object-fit: cover; display: block; flex: none; }
+        @media (max-width: 1023px) {
+          .marquee-pill { height: 56px; padding: 0 20px; font-size: 18px; gap: 8px; }
+          .marquee-num { font-size: 20px; }
+          .marquee-sep { width: 56px; height: 56px; }
+          .marquee-sep img { width: 56px; height: 56px; }
+          .marquee-sep-icon { width: 26px; height: 26px; }
+        }
         @keyframes orbit-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes counter-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
         @keyframes scroll-ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
@@ -1184,403 +2642,320 @@ export function LandingPage() {
         .animate-leaderboard:hover { animation-play-state: paused; }
       `}} />
       {/* Live Tracker Marquee */}
-      <div className="relative overflow-hidden bg-[#0F1B3D] border-y border-white/10">
-        <div className="flex whitespace-nowrap animate-marquee py-2.5">
+      <div className="relative overflow-hidden bg-[#FAF8F4]">
+        <div className="flex whitespace-nowrap animate-marquee py-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex items-center gap-8 mx-4 text-xs text-white/70 shrink-0">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#18A878] animate-pulse" />
-                Active Learners: <strong className="text-white font-semibold">4,209</strong>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Code className="w-3 h-3 text-[#6D3DF5]" />
-                Lines of Code Written Today: <strong className="text-white font-semibold">104K+</strong>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <GraduationCap className="w-3 h-3 text-[#60A5FA]" />
-                Courses Completed Today: <strong className="text-white font-semibold">847</strong>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Trophy className="w-3 h-3 text-[#18A878]" />
-                Badges Earned Today: <strong className="text-white font-semibold">312</strong>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <TrendingUp className="w-3 h-3 text-[#60A5FA]" />
-                Job Placements This Week: <strong className="text-white font-semibold">128</strong>
-              </span>
+            <div key={i} className="flex items-center shrink-0">
+              {marqueeCourses.map((c) => (
+                <div key={c.title} className="flex items-center gap-4 pr-4 shrink-0">
+                  <div className="marquee-sep"><img src={c.img} alt="" width={80} height={80} loading="lazy" /></div>
+                  <div className="marquee-pill marquee-course">{c.title}</div>
+                </div>
+              ))}
             </div>
           ))}
         </div>
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#FAF8F4] to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#FAF8F4] to-transparent z-10" />
       </div>
 
 
 
-      {/* Explore Popular Courses — Premium Smart Grid */}
-      <section id="courses" className="py-16 lg:py-20 relative overflow-hidden">
-        {/* Background student study image */}
-        <div className="absolute inset-0 pointer-events-none">
-          <Image
-            src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1920&h=1080&fit=crop&q=80"
-            alt=""
-            width={1920}
-            height={1080}
-            className="absolute inset-0 w-full h-full object-cover opacity-[0.12]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-white/95 via-white/85 to-white/95" />
+      {/* Courses Built For Careers — Curated Catalog */}
+      <section id="courses" className="py-12 sm:py-16 lg:py-24 relative overflow-hidden" style={{ backgroundColor: '#FAF8F4', fontFamily: "var(--font-mona)" }}>
+        {/* Soft decorative glows */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div className="absolute -top-16 -right-16 w-[260px] h-[260px] rounded-full bg-[#7C3AED]/10 blur-3xl sm:-top-24 sm:-right-24 sm:w-[420px] sm:h-[420px]" />
+          <div className="absolute top-1/3 -left-20 w-[240px] h-[240px] rounded-full bg-[#E07B22]/10 blur-3xl sm:-left-28 sm:w-[380px] sm:h-[380px]" />
+          <div className="absolute -bottom-20 left-1/2 w-[280px] h-[240px] rounded-full bg-[#1F4D3A]/10 blur-3xl sm:-bottom-28 sm:w-[460px] sm:h-[380px]" />
         </div>
 
-        <Container size="xl" className="relative z-10">
-          {/* Hero banner — full-width image with text overlay on the image body */}
+        <Container size="xl" className="relative px-4 sm:px-5 lg:px-8">
+          {/* Section header */}
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-            className="relative pb-8 lg:pb-10"
+            variants={staggerContainer}
+            className="text-center max-w-2xl mx-auto mb-7 sm:mb-10 lg:mb-12"
           >
-            <div className="relative rounded-[24px] p-2 bg-gradient-to-r from-[#F3EEFF] via-white to-[#EEF4FF] border border-[#E9E7F5] shadow-sm overflow-hidden">
-              <div className="relative overflow-hidden rounded-[18px] h-[150px] sm:h-[180px] lg:h-[200px] flex items-center justify-center">
-                <Image
-                  src="https://plain-apac-prod-public.komododecks.com/202609/11/for4HhQb0SsZ6Y8apglF/image.jpg"
-                  alt="Students learning technology"
-                  width={1920}
-                  height={1280}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0F1B3D]/90 via-[#0F1B3D]/45 to-[#0F1B3D]/20" />
-
-                {/* Overlaid text — heading lives on the image body */}
-                <motion.div
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, margin: '-80px' }}
-                  variants={staggerContainer}
-                  className="relative z-10 text-center px-5 py-6 max-w-4xl"
-                >
-                  {/* Headline */}
-                  <motion.h2 variants={fadeUp} className="text-[30px] lg:text-[40px] xl:text-[48px] font-extrabold tracking-tight leading-[1.08] text-white">
-                    Courses Built For <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C4B5FD] to-[#93C5FD]">Careers</span>
-                  </motion.h2>
-
-                  {/* Subheading — two lines */}
-                  <motion.p variants={fadeUp} className="text-[13px] lg:text-[15px] text-white/85 max-w-xl mx-auto leading-snug mt-3 line-clamp-2">
-                    Master industry-relevant skills with hands-on projects, expert guidance and real career support.
-                  </motion.p>
-                </motion.div>
-              </div>
-            </div>
+            <motion.div variants={fadeUp}>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white border border-[#E8E4DD] px-3.5 py-1.5 shadow-[0_4px_14px_-8px_rgba(31,77,58,0.25)] mb-3.5 sm:mb-5">
+                <span className="w-2 h-2 rounded-full bg-[#E07B22]" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1F4D3A] sm:text-[11px] sm:tracking-[0.18em]">Courses</span>
+              </span>
+            </motion.div>
+            <motion.h2 variants={fadeUp} className="text-[27px] sm:text-[32px] lg:text-[36px] font-semibold tracking-tight leading-[1.12] text-[#1F4D3A] break-words">
+              Courses Built For Careers
+            </motion.h2>
+            <motion.p variants={fadeUp} className="text-[13px] sm:text-[14px] lg:text-[15px] text-[#5A6B63] leading-relaxed mt-3 mx-auto max-w-xl">
+              Master industry-relevant skills with hands-on projects, expert guidance and real career support.
+            </motion.p>
           </motion.div>
 
-          {/* Toolbar: search + sort + view toggle */}
-          <div className="rounded-[20px] bg-white border border-[#E9E7F5] shadow-sm p-3.5 flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B94A8]" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search courses..."
-                className="w-full rounded-xl border border-[#E9E7F5] bg-[#F8FAFC] pl-9 pr-3 py-2.5 text-[12.5px] font-medium text-[#0F1B3D] placeholder:text-[#8B94A8] focus:outline-none focus:ring-2 focus:ring-[#6D3DF5]/20 focus:border-[#6D3DF5]/50 transition-all"
-              />
-            </div>
+          {/* Filter pills (removed — sidebar covers these) */}
 
-            {/* Sort dropdown */}
-            <div className="relative shrink-0">
+          {/* Sort / results bar */}
+          <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:flex-wrap sm:items-center">
+            <p className="min-w-0 text-[12.5px] sm:text-[13px] font-medium text-[#5A6B63] tabular-nums">
+              Showing{' '}
+              <span className="font-bold text-[#1F4D3A]">{paginatedCourses.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1}–{Math.min(effectivePage * pageSize, filteredAndSortedCourses.length)}</span>{' '}
+              of <span className="font-bold text-[#1F4D3A]">{filteredAndSortedCourses.length}</span> Results
+            </p>
+
+            <div className="landing-control-frame flex w-full min-w-0 flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:justify-end">
+              {/* Mobile filter trigger */}
               <button
                 type="button"
-                onClick={() => setSortOpen((o) => !o)}
-                aria-haspopup="listbox"
-                aria-expanded={sortOpen}
-                className={cn(
-                  'w-full lg:w-auto inline-flex items-center justify-between gap-2 rounded-xl border bg-white px-3.5 py-2.5 text-[12.5px] font-bold text-[#0F1B3D] transition-all duration-200',
-                  sortOpen ? 'border-[#6D3DF5]/50 ring-2 ring-[#6D3DF5]/15' : 'border-[#E9E7F5] hover:border-[#6D3DF5]/40'
-                )}
+                onClick={() => setFiltersOpen(true)}
+                className="landing-control-reset inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-[#E8E4DD] bg-white px-3.5 text-[12.5px] font-bold text-[#1F4D3A] shadow-[0_2px_10px_-6px_rgba(31,77,58,0.25)] transition-all duration-200 hover:border-[#E07B22]/50 active:scale-[0.97] lg:hidden"
               >
-                <span className="inline-flex items-center gap-2">
-                  <ArrowDownWideNarrow className="w-4 h-4 text-[#6D3DF5]" />
-                  {sortLabels[sortOrder]}
-                </span>
-                <ChevronDown className={cn('w-4 h-4 text-[#8B94A8] transition-transform duration-300', sortOpen && 'rotate-180')} />
-              </button>
-
-              {sortOpen && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setSortOpen(false)} aria-hidden="true" />
-                  <div className="absolute z-40 right-0 top-full mt-2 w-full min-w-[190px] rounded-xl bg-white border border-[#E9E7F5] py-1.5 shadow-lg shadow-slate-900/10">
-                    {sortOptions.map((o) => (
-                      <button
-                        key={o.key}
-                        type="button"
-                        onClick={() => { setSortOrder(o.key); setSortOpen(false) }}
-                        className={cn(
-                          'w-[calc(100%-12px)] mx-1.5 flex items-center gap-2 px-3 py-2 rounded-lg text-[12.5px] font-semibold text-left transition-colors',
-                          sortOrder === o.key ? 'bg-[#F3EEFF] text-[#6D3DF5]' : 'text-[#536078] hover:bg-[#F8FAFC] hover:text-[#0F1B3D]'
-                        )}
-                      >
-                        {o.label}
-                        {sortOrder === o.key && <Check className="w-3.5 h-3.5 ml-auto text-[#6D3DF5]" />}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Grid / List toggle */}
-            <div className="inline-flex rounded-xl border border-[#E9E7F5] bg-[#F8FAFC] p-0.5 shrink-0 self-start lg:self-auto">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                aria-label="Grid view"
-                aria-pressed={viewMode === 'grid'}
-                className={cn('w-9 h-8 rounded-[10px] flex items-center justify-center transition-all',
-                  viewMode === 'grid' ? 'bg-white shadow-sm text-[#6D3DF5]' : 'text-[#8B94A8] hover:text-[#6D3DF5]')}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                aria-label="List view"
-                aria-pressed={viewMode === 'list'}
-                className={cn('w-9 h-8 rounded-[10px] flex items-center justify-center transition-all',
-                  viewMode === 'list' ? 'bg-white shadow-sm text-[#6D3DF5]' : 'text-[#8B94A8] hover:text-[#6D3DF5]')}
-              >
-                <LayoutList className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Marketplace layout: sidebar filters + course grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-6 items-stretch">
-            {/* ===== Sidebar (Filters) ===== */}
-            <motion.aside variants={fadeUp} className="rounded-2xl bg-white border border-gray-100 shadow-[0_4px_24px_-6px_rgba(0,0,0,0.07)] overflow-hidden flex flex-col h-full">
-              {/* Header */}
-              <div className="px-4 pt-4 pb-3 flex items-center justify-between">
-                <span className="inline-flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] flex items-center justify-center shadow-md shadow-[#7C3AED]/25">
-                    <SlidersHorizontal className="w-4 h-4 text-white" />
+                <SlidersHorizontal className="w-4 h-4 text-[#E07B22]" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#E07B22] text-white text-[10px] font-bold tabular-nums">
+                    {activeFilterCount}
                   </span>
-                  <span className="text-[14px] font-bold text-gray-900 tracking-tight">Filter Courses</span>
-                </span>
+                )}
+              </button>
+
+              {/* Grid / List toggle */}
+              <div className="landing-control-frame inline-flex h-10 shrink-0 items-center rounded-xl border border-[#E8E4DD] bg-white p-0.5 shadow-[0_2px_10px_-6px_rgba(31,77,58,0.25)]">
                 <button
                   type="button"
-                  onClick={resetAllFilters}
-                  className="text-[11px] font-semibold text-[#7C3AED] hover:text-[#5B21B6] transition-colors"
+                  onClick={() => setViewMode('grid')}
+                  aria-label="Grid view"
+                  aria-pressed={viewMode === 'grid'}
+                  className={cn('landing-control-reset flex h-9 w-9 items-center justify-center rounded-[10px] transition-all',
+                    viewMode === 'grid' ? 'bg-[#1F4D3A] text-white shadow-sm' : 'text-[#8B94A8] hover:text-[#E07B22]')}
                 >
-                  Reset All
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  aria-label="List view"
+                  aria-pressed={viewMode === 'list'}
+                  className={cn('landing-control-reset flex h-9 w-9 items-center justify-center rounded-[10px] transition-all',
+                    viewMode === 'list' ? 'bg-[#1F4D3A] text-white shadow-sm' : 'text-[#8B94A8] hover:text-[#E07B22]')}
+                >
+                  <LayoutList className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="h-px bg-gray-100 mx-4" />
+              {/* Sort dropdown */}
+              <div className="landing-control-frame relative w-full min-w-0 sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setSortOpen((o) => !o)}
+                  aria-haspopup="listbox"
+                  aria-expanded={sortOpen}
+                  className={cn(
+                    'landing-control-reset flex h-10 w-full items-center justify-between gap-2 whitespace-nowrap rounded-xl border border-[#E8E4DD] bg-white px-3.5 text-left text-[12.5px] font-bold text-[#1F4D3A] shadow-[0_2px_10px_-6px_rgba(31,77,58,0.25)] transition-all duration-200 sm:w-auto sm:min-w-[190px]',
+                    sortOpen ? 'border-[#E07B22]/50 ring-2 ring-[#E07B22]/15' : 'hover:border-[#E07B22]/50'
+                  )}
+                >
+                  <span className="inline-flex min-w-0 items-center gap-2">
+                    <ArrowDownWideNarrow className="w-4 h-4 shrink-0 text-[#E07B22]" />
+                    <span className="truncate">{sortLabels[sortOrder]}</span>
+                  </span>
+                  <ChevronDown className={cn('w-4 h-4 shrink-0 text-[#8B94A8] transition-transform duration-300', sortOpen && 'rotate-180')} />
+                </button>
 
-              {/* Categories */}
-              <div className="px-4 pt-3">
-                <p className="text-[11px] font-bold text-gray-900 mb-2">Categories</p>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {categoryOptions.map((cat) => {
-                    const isActive = activeCategory === cat.key
-                    const label = sidebarCategoryLabels[cat.key] ?? cat.label
-                    return (
-                      <button
-                        key={cat.key}
-                        type="button"
-                        onClick={() => selectCategory(cat.key)}
-                        className={cn(
-                          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200 border',
-                          isActive
-                            ? 'bg-gradient-to-r from-[#7C3AED] to-[#A78BFA] text-white border-[#7C3AED] shadow-md shadow-[#7C3AED]/25'
-                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-[#7C3AED]/40 hover:text-[#7C3AED] hover:bg-[#F5F0FF]'
-                        )}
-                      >
-                        <cat.icon className="w-3 h-3" strokeWidth={2} />
-                        <span className="truncate">{label}</span>
-                        <span className={cn(
-                          'ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-md shrink-0',
-                          isActive ? 'bg-white/20 text-white' : 'bg-gray-200/60 text-gray-500'
-                        )}>
-                          {cat.count}
+                {sortOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setSortOpen(false)} aria-hidden="true" />
+                    <div className="absolute left-0 top-full z-40 mt-2 w-full min-w-[190px] rounded-xl border border-[#E8E4DD] bg-white py-1.5 shadow-[0_18px_40px_-18px_rgba(31,45,61,0.35)] sm:right-0 sm:left-auto sm:w-auto">
+                      {sortOptions.map((o) => (
+                        <button
+                          key={o.key}
+                          type="button"
+                          onClick={() => { setSortOrder(o.key); setSortOpen(false) }}
+                          className={cn(
+                            'mx-1.5 flex w-[calc(100%-12px)] items-center gap-2 rounded-lg px-3 py-2 text-left text-[12.5px] font-semibold transition-colors',
+                            sortOrder === o.key ? 'bg-[#FDEBDD] text-[#E07B22]' : 'text-[#5A6B63] hover:bg-[#FAF8F4] hover:text-[#1F4D3A]'
+                          )}
+                        >
+                          <span className="min-w-0 flex-1">{o.label}</span>
+                          {sortOrder === o.key && <Check className="ml-auto w-3.5 h-3.5 shrink-0 text-[#E07B22]" />}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Marketplace layout: sticky sidebar + course grid */}
+          <div className="grid grid-cols-1 items-start gap-4 sm:gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-8">
+            {/* Desktop sidebar */}
+            <div className="hidden lg:block lg:sticky lg:top-28">
+              {renderFilters(false)}
+            </div>
+
+            {/* Mobile filters drawer */}
+            <AnimatePresence>
+              {filtersOpen && (
+                <>
+                  <motion.div
+                    key="filters-backdrop"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => setFiltersOpen(false)}
+                    className="fixed inset-0 z-[60] bg-[#1F4D3A]/35 backdrop-blur-sm lg:hidden"
+                    aria-hidden="true"
+                  />
+                  <motion.div
+                    key="filters-drawer"
+                    initial={{ x: '-100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '-100%' }}
+                    transition={{ type: 'tween', duration: 0.3, ease: 'easeOut' }}
+                    className="fixed bottom-0 left-0 top-0 z-[70] w-[310px] max-w-[calc(100vw-24px)] overflow-y-auto overscroll-contain bg-[#FAF8F4] p-4 shadow-2xl sm:p-5 lg:hidden scrollbar-none"
+                  >
+                    <div className="sticky top-0 z-10 -mx-4 mb-4 flex items-center justify-between border-b border-[#E8E4DD] bg-[#FAF8F4]/95 px-4 pb-3 pt-0 backdrop-blur sm:-mx-5 sm:px-5">
+                      <span className="inline-flex items-center gap-2 text-[15px] font-bold text-[#1F4D3A]">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#A78BFA] shadow-md shadow-[#7C3AED]/25">
+                          <SlidersHorizontal className="w-4 h-4 text-white" />
                         </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="h-px bg-gray-100 mx-4 my-3" />
-
-              {/* Price Range */}
-              <div className="px-4">
-                <p className="text-[11px] font-bold text-gray-900 mb-2">Price Range</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {sidebarPriceOptions.map((opt) => {
-                    const isActive = priceRange === opt.key
-                    return (
+                        Filters
+                      </span>
                       <button
-                        key={opt.key}
                         type="button"
-                        onClick={() => selectPriceRange(opt.key)}
-                        className={cn(
-                          'px-2 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200 border text-center',
-                          isActive
-                            ? 'bg-gradient-to-r from-[#7C3AED] to-[#A78BFA] text-white border-[#7C3AED] shadow-md shadow-[#7C3AED]/25'
-                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-[#7C3AED]/40 hover:text-[#7C3AED] hover:bg-[#F5F0FF]'
-                        )}
+                        onClick={() => setFiltersOpen(false)}
+                        aria-label="Close filters"
+                        className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E8E4DD] bg-white text-[#5A6B63] transition-colors hover:text-[#E07B22] active:scale-90"
                       >
-                        {opt.label}
+                        <X className="w-4 h-4" />
                       </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="h-px bg-gray-100 mx-4 my-3" />
-
-              {/* Level */}
-              <div className="px-4 pb-4">
-                <p className="text-[11px] font-bold text-gray-900 mb-2">Level</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {levelOptions.map((opt) => {
-                    const isActive = levelFilter === opt.key
-                    return (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        onClick={() => setLevelFilter(opt.key as any)}
-                        className={cn(
-                          'px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200 border text-center',
-                          isActive
-                            ? 'bg-gradient-to-r from-[#EA580C] to-[#F97316] text-white border-[#EA580C] shadow-md shadow-[#EA580C]/25'
-                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-[#EA580C]/40 hover:text-[#EA580C] hover:bg-[#FFF7ED]'
-                        )}
-                      >
-                        {opt.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </motion.aside>
+                    </div>
+                    {renderFilters(true)}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
 
             {/* ===== Main content ===== */}
             <div className="min-w-0 space-y-6 flex flex-col">
 
           {/* Course Grid — grid view */}
           {viewMode === 'grid' ? (
-          <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6">
-            {paginatedCourses.map((course) => {
+          <motion.div layout className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3 xl:gap-5">
+            {paginatedCourses.map((course, idx) => {
               const hasDiscount = Number(course.originalPrice) > Number(course.price) && Number(course.originalPrice) > 0
               const savings = hasDiscount ? Math.round((1 - course.price / course.originalPrice) * 100) : 0
               const courseSlug = course.slug || toSlug(course.title)
-              const categoryKey = course.category === 'Development & Tech' ? 'tech' : course.category === 'AI & Data Science' ? 'tech' : course.category === 'Business & Marketing' ? 'business' : course.category === 'Personal Growth' ? 'business' : course.category === 'Career Development' || course.category === 'Language & Communication' ? 'business' : 'design'
-              const categoryMeta = {
-                design: { chip: 'bg-[#6D3DF5]', tint: 'from-[#F3EEFF]', accentText: 'text-[#6D3DF5]', borderHover: 'hover:border-[#6D3DF5]/40' },
-                tech: { chip: 'bg-[#3478F6]', tint: 'from-[#EEF4FF]', accentText: 'text-[#3478F6]', borderHover: 'hover:border-[#3478F6]/40' },
-                business: { chip: 'bg-[#18A878]', tint: 'from-[#ECFBF5]', accentText: 'text-[#18A878]', borderHover: 'hover:border-[#18A878]/40' },
-              }[categoryKey]
+              const theme = courseCardTheme[course.category] ?? defaultCardTheme
+              const catLabel = courseTagLabel(course)
+              const studentsLabel = Number(course.students) >= 1000 ? `${(Number(course.students) / 1000).toFixed(1)}k` : String(course.students)
               return (
               <motion.div
                 key={course.id}
                 layout
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-30px' }}
-                transition={{ duration: 0.4, delay: Math.min((course.id % 20) * 0.04, 0.3) }}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
+                whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: prefersReducedMotion ? 0 : Math.min(idx * 0.08, 0.48), ease: 'easeOut' }}
                 className="group/card cursor-pointer"
                 onClick={() => router.push(`/course/${courseSlug}`)}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.985 }}
               >
                 <div className={cn(
-                  'h-full rounded-2xl border bg-white flex flex-col overflow-hidden transition-all duration-300',
-                  'border-[#E5E7EB] shadow-[0_2px_12px_-4px_rgba(0,0,0,0.08)] hover:shadow-[0_16px_40px_-12px_rgba(0,0,0,0.15)] hover:-translate-y-1',
-                  categoryMeta.borderHover
+                  'relative flex h-full flex-col overflow-hidden rounded-xl bg-white ring-1 ring-[#E8E4DD] shadow-[0_6px_24px_-12px_rgba(31,77,58,0.2)] transition-all duration-300',
+                  'group-hover/card:-translate-y-1.5 group-hover/card:shadow-[0_22px_44px_-16px_rgba(31,77,58,0.32)] group-hover/card:ring-[#E07B22]/40'
                 )}>
-                  {/* Image */}
-                  <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
-                    <Image
-                      src={course.image}
-                      alt={course.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover/card:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
-                    
-                    {/* Badge */}
-                    <div className="absolute top-3 left-3">
-                      <span className={cn('px-2.5 py-1 rounded-lg text-[10px] font-bold text-white shadow-md', categoryMeta.chip)}>
-                        {course.category === 'Design & Media' ? 'Design' : course.category === 'Development & Tech' || course.category === 'AI & Data Science' ? 'Tech' : course.category === 'Career Development' ? 'Career' : course.category === 'Language & Communication' ? 'Communication' : 'Business'}
+                  {/* Thumbnail */}
+                  <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+                    <div className={cn('absolute inset-0 bg-gradient-to-br', theme.grad)} />
+                    {/* Gentle idle Ken Burns drift so the whole grid feels alive */}
+                    <motion.div
+                      className="absolute inset-0 will-change-transform"
+                      initial={false}
+                      animate={prefersReducedMotion ? { scale: 1.03 } : { scale: [1.03, 1.11, 1.03] }}
+                      transition={prefersReducedMotion ? { duration: 0 } : { duration: 16, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <Image
+                        src={course.image}
+                        alt={course.title}
+                        fill
+                        sizes="(max-width: 639px) 100vw, (max-width: 1279px) 50vw, 33vw"
+                        className="relative object-cover transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:scale-[1.14] group-hover/card:rotate-[0.4deg]"
+                      />
+                    </motion.div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1F4D3A]/10 via-transparent to-transparent" />
+
+                    {/* Animated hover overlay */}
+                    <div className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-t from-[#1F4D3A]/80 via-[#1F4D3A]/20 to-transparent opacity-0 translate-y-2 transition-all duration-300 ease-out group-hover/card:opacity-100 group-hover/card:translate-y-0" />
+
+                    {/* Diagonal glass sheen sweeping across on hover */}
+                    <div className="pointer-events-none absolute inset-y-0 left-0 z-[6] w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent blur-[2px] -translate-x-[130%] transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:translate-x-[330%]" />
+
+                    <div className="absolute top-3 left-3 z-10">
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white shadow-sm" style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(6px)' }}>
+                        <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                        {catLabel}
                       </span>
                     </div>
 
-                    {/* Duration */}
-                    <div className="absolute top-3 right-3">
-                      <span className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-sm text-[10px] font-semibold text-white flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {course.duration}
-                      </span>
-                    </div>
-
-                    {/* Rating */}
-                    <div className="absolute bottom-3 right-3">
-                      <span className="px-2 py-1 rounded-lg bg-white/95 backdrop-blur-sm text-[11px] font-bold text-[#0F1B3D] flex items-center gap-1 shadow-sm">
-                        <Star className="w-3 h-3 text-[#F59E0B] fill-[#F59E0B]" />
-                        {course.rating}
-                      </span>
-                    </div>
+                    {hasDiscount && (
+                      <div className="absolute top-3 right-3 z-10">
+                        <span className="inline-flex items-center rounded-full bg-[#E07B22] px-2.5 py-1 text-[10px] font-extrabold text-white shadow-[0_4px_12px_-4px_rgba(224,123,34,0.8)]">
+                          {savings}% Off
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Content */}
-                  <div className="p-4 flex flex-col flex-1">
-                    {/* Title */}
-                    <h3 className="text-[14px] font-bold text-[#0F1B3D] line-clamp-2 leading-snug mb-2 group-hover/card:text-[#6D3DF5] transition-colors">
+                  {/* Body */}
+                  <div className="flex flex-1 flex-col p-3.5 sm:p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <Stars rating={Number(course.rating) || 4.5} />
+                      <span className="min-w-0 truncate text-[11px] font-medium text-[#5A6B63] sm:text-[11.5px]">By {course.instructor}</span>
+                    </div>
+
+                    <h3 className="mb-3 line-clamp-2 break-words text-[15px] font-semibold leading-snug text-[#1F4D3A] transition-colors duration-300 group-hover/card:text-[#E07B22] sm:text-[16px] lg:text-[16.5px]">
                       {course.title}
                     </h3>
 
-                    {/* Instructor */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-[8px] font-bold text-gray-600">
-                        {course.instructor.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                      </div>
-                      <span className="text-[12px] font-medium text-[#536078]">{course.instructor}</span>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="flex items-center gap-3 text-[11px] text-[#6B7280] mb-3">
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" />
-                        {course.students >= 1000 ? `${(course.students / 1000).toFixed(1)}k` : course.students}
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11.5px] text-[#5A6B63] mb-1">
+                      <span className="inline-flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-[#E07B22]" />
+                        {course.lessons} Lessons
                       </span>
-                      <span className="flex items-center gap-1">
-                        <BookOpen className="w-3.5 h-3.5" />
-                        {course.lessons} lessons
+                      <span className="inline-flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-[#1F4D3A]" />
+                        {studentsLabel} Students
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-[#E07B22]" />
+                        {courseDurationMonths(course)}
                       </span>
                     </div>
 
-                    {/* Spacer */}
                     <div className="flex-1" />
 
-                    {/* Price + CTA */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <div>
-                        <span className="text-lg font-extrabold text-[#0F1B3D]">৳{course.price.toLocaleString()}</span>
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#F0EBE2] pt-3.5 sm:gap-3">
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-1.5">
+                        <span className="break-words text-[15px] font-bold tabular-nums text-[#1F4D3A]">৳{course.price.toLocaleString()}</span>
                         {hasDiscount && (
-                          <>
-                            <span className="text-[11px] text-gray-400 line-through ml-1.5">৳{course.originalPrice.toLocaleString()}</span>
-                            <span className={cn('ml-1.5 text-[10px] font-bold', categoryMeta.accentText)}>Save {savings}%</span>
-                          </>
+                          <span className="break-words text-[11px] tabular-nums text-[#9AA7A0] line-through sm:text-[11.5px]">৳{course.originalPrice.toLocaleString()}</span>
                         )}
                       </div>
                       <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation()
                           savePendingEnrollment(course)
                           saveCourseSnapshot(course)
-                          router.push(`/payment/${course.id}`)
+                          router.push(`/student-information?courseId=${course.id}`)
                         }}
-                        className="px-4 py-2 rounded-xl bg-[#0F1B3D] hover:bg-[#1E293B] text-white text-[12px] font-semibold transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow-md active:scale-95"
+                        className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-[#E07B22] px-3 py-2 text-[12px] font-bold text-white shadow-[0_8px_18px_-8px_rgba(224,123,34,0.85)] transition-all duration-300 hover:bg-[#C96A18] active:scale-90 sm:px-3.5"
                       >
-                        Enroll <ArrowRight className="w-3.5 h-3.5" />
+                        Enroll
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/card:translate-x-0.5" />
                       </button>
                     </div>
                   </div>
@@ -1591,7 +2966,7 @@ export function LandingPage() {
           </motion.div>
           ) : (
             // List view — horizontal cards
-            <div className="grid grid-cols-1 gap-4 lg:gap-5">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-5">
               {paginatedCourses.map((course) => {
                 const hasDiscount = Number(course.originalPrice) > Number(course.price) && Number(course.originalPrice) > 0
                 const savings = hasDiscount ? Math.round((1 - course.price / course.originalPrice) * 100) : 0
@@ -1629,10 +3004,18 @@ export function LandingPage() {
                     onClick={() => router.push(`/course/${courseSlug}`)}
                     whileTap={{ scale: 0.995 }}
                   >
-                    <div className={cn('rounded-2xl border bg-white flex flex-col sm:flex-row overflow-hidden transition-all duration-300 ring-1 ring-black/[0.02] hover:-translate-y-1', 'border-[#E9E7F5] shadow-sm hover:shadow-lg', categoryMeta.borderHover)}>
+                    <div className={cn('flex flex-col overflow-hidden rounded-2xl border bg-white transition-all duration-300 hover:-translate-y-1 ring-1 ring-black/[0.02] md:flex-row', 'border-[#E8E4DD] shadow-[0_6px_24px_-12px_rgba(31,77,58,0.18)] hover:shadow-[0_18px_40px_-16px_rgba(31,77,58,0.3)]', categoryMeta.borderHover, 'hover:ring-[#E07B22]/30')}>
                       {/* Thumb */}
-                      <div className="relative sm:w-60 lg:w-64 shrink-0 aspect-video sm:aspect-auto overflow-hidden bg-slate-100">
-                        <Image src={course.image} alt={course.title} fill className="object-cover transition-transform duration-700 ease-out group-hover/card:scale-110" />
+                      <div className="relative aspect-video shrink-0 overflow-hidden bg-slate-100 md:w-60 md:aspect-auto lg:w-64">
+                        <motion.div
+                          className="absolute inset-0 will-change-transform"
+                          initial={false}
+                          animate={prefersReducedMotion ? { scale: 1.03 } : { scale: [1.03, 1.1, 1.03] }}
+                          transition={prefersReducedMotion ? { duration: 0 } : { duration: 16, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                          <Image src={course.image} alt={course.title} fill className="object-cover transition-transform duration-[1000ms] ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:scale-[1.12] group-hover/card:rotate-[0.4deg]" />
+                        </motion.div>
+                        <div className="pointer-events-none absolute inset-0 z-[5] w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent blur-[2px] -translate-x-[130%] transition-transform duration-[1000ms] ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:translate-x-[330%]" />
                         <div className={cn('absolute top-3 left-3 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full shadow-sm text-white', trendBadge.cls)}>
                           <trendBadge.icon className="w-2.5 h-2.5" />
                           <span className="text-[8px] font-bold uppercase tracking-wider">{badgeType}</span>
@@ -1646,48 +3029,48 @@ export function LandingPage() {
                       </div>
 
                       {/* Body */}
-                      <div className="flex-1 min-w-0 p-5 flex flex-col gap-2.5">
+                      <div className="flex min-w-0 flex-1 flex-col gap-2.5 p-4 sm:p-5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className={cn('px-2 py-0.5 rounded-full border text-[9px] font-semibold', level.cls)}>{level.label}</span>
-                          <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold text-white', categoryMeta.chip)}>
+                          <span className={cn('rounded-full border px-2 py-0.5 text-[9px] font-semibold', level.cls)}>{level.label}</span>
+                          <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold text-white', categoryMeta.chip)}>
                             <categoryMeta.icon className="w-2.5 h-2.5" /> {course.category === 'Design & Media' ? 'Design' : course.category === 'Development & Tech' || course.category === 'AI & Data Science' ? 'Tech' : course.category === 'Career Development' ? 'Career' : 'Business'}
                           </span>
-                          <span className="ml-auto inline-flex items-center gap-0.5 text-[11px] font-bold text-[#F59E0B]">
-                            <Star className="w-3 h-3 fill-[#F59E0B]" /> {course.rating}
+                          <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-bold text-[#E07B22] sm:ml-auto">
+                            <Star className="w-3 h-3 fill-[#E07B22]" /> {course.rating}
                             <span className="text-[10px] font-medium text-[#536078]">({reviewCount})</span>
                           </span>
                         </div>
 
-                        <h3 className="text-[15px] font-extrabold text-[#0F1B3D] line-clamp-1 transition-colors group-hover/card:text-[#6D3DF5]">{course.title}</h3>
-                        <p className="text-[12px] text-[#536078] line-clamp-1">{skills.join(' · ')}{course.feature ? ` · ${course.feature}` : ''}</p>
+                        <h3 className="line-clamp-2 break-words text-[15px] font-extrabold text-[#1F4D3A] transition-colors group-hover/card:text-[#E07B22] sm:line-clamp-1">{course.title}</h3>
+                        <p className="line-clamp-2 text-[12px] text-[#536078] sm:line-clamp-1">{skills.join(' · ')}{course.feature ? ` · ${course.feature}` : ''}</p>
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] font-semibold text-[#536078]">
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className={cn('w-6 h-6 rounded-full bg-gradient-to-br flex items-center justify-center text-[7px] font-bold text-white ring-1 ring-[#E9E7F5]', categoryMeta.avatar)}>{initials}</span>
-                            <span className="truncate">{course.instructor}</span>
-                            <BadgeCheck className="w-3 h-3 text-[#3478F6]" />
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[7px] font-bold text-white ring-1 ring-[#E9E7F5]', categoryMeta.avatar)}>{initials}</span>
+                            <span className="max-w-[110px] truncate sm:max-w-none">{course.instructor}</span>
+                            <BadgeCheck className="w-3 h-3 shrink-0 text-[#3478F6]" />
                           </span>
-                          <span className="w-px h-3.5 bg-[#E9E7F5]" />
-                          <span className="inline-flex items-center gap-1"><Users className="w-3 h-3 text-[#3478F6]" />{course.students >= 1000 ? `${(course.students / 1000).toFixed(1)}k` : course.students}</span>
-                          <span className="inline-flex items-center gap-1"><BookOpen className="w-3 h-3 text-[#6D3DF5]" />{course.lessons} lessons</span>
-                          <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3 text-[#18A878]" />{course.duration}</span>
+                          <span className="hidden h-3.5 w-px bg-[#E9E7F5] sm:block" />
+                          <span className="inline-flex items-center gap-1"><Users className="w-3 h-3 shrink-0 text-[#3478F6]" />{course.students >= 1000 ? `${(course.students / 1000).toFixed(1)}k` : course.students}</span>
+                          <span className="inline-flex items-center gap-1"><BookOpen className="w-3 h-3 shrink-0 text-[#E07B22]" />{course.lessons} lessons</span>
+                          <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3 shrink-0 text-[#E07B22]" />{courseDurationMonths(course)}</span>
                         </div>
 
-                        <div className="mt-2 flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[#E9E7F5]">
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-[19px] font-extrabold text-[#6D3DF5]">৳{course.price.toLocaleString()}</span>
+                        <div className="mt-2 flex flex-col items-stretch gap-3 border-t border-[#F0EBE2] pt-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+                            <span className="break-words text-[18px] font-extrabold text-[#1F4D3A] sm:text-[19px]">৳{course.price.toLocaleString()}</span>
                             {hasDiscount && (
                               <>
-                                <span className="text-[12px] font-semibold text-[#536078] line-through">৳{course.originalPrice.toLocaleString()}</span>
+                                <span className="break-words text-[12px] font-semibold text-[#536078] line-through">৳{course.originalPrice.toLocaleString()}</span>
                                 <span className={cn('inline-flex items-center gap-1 text-[10px] font-bold', categoryMeta.accentText)}><TrendingUp className="w-2.5 h-2.5" />Save {savings}%</span>
                               </>
                             )}
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-[12px] font-bold text-[#6D3DF5] underline-offset-4 group-hover/card:underline cursor-pointer">Read More</span>
+                          <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-end">
+                            <span className="text-[12px] font-bold text-[#E07B22] underline-offset-4 group-hover/card:underline">Read More</span>
                             <button
-                              onClick={(e) => { e.stopPropagation(); savePendingEnrollment(course); saveCourseSnapshot(course); router.push(`/payment/${course.id}`) }}
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#6D3DF5] to-[#3478F6] px-4 py-2 text-[12px] font-bold text-white shadow-sm hover:shadow-md hover:brightness-110 active:scale-95 transition-all duration-200"
+                              onClick={(e) => { e.stopPropagation(); savePendingEnrollment(course); saveCourseSnapshot(course); router.push(`/student-information?courseId=${course.id}`) }}
+                              className="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-[#E07B22] px-3 py-2 text-[12px] font-bold text-white shadow-[0_8px_18px_-8px_rgba(224,123,34,0.75)] transition-all duration-200 hover:bg-[#C96A18] hover:shadow-[0_12px_22px_-10px_rgba(224,123,34,0.85)] active:scale-95 sm:flex-none sm:px-4"
                             >
                               Enroll Now <ArrowRight className="w-3 h-3" />
                             </button>
@@ -1710,15 +3093,15 @@ export function LandingPage() {
               transition={{ duration: 0.35 }}
               className="text-center py-16"
             >
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#F3EEFF] border border-[#6D3DF5]/15 shadow-chip mb-4">
-                <FilterX className="w-7 h-7 text-[#6D3DF5]" />
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border border-[#E8E4DD] shadow-[0_6px_24px_-12px_rgba(31,77,58,0.2)] mb-4">
+                <FilterX className="w-7 h-7 text-[#E07B22]" />
               </div>
-              <h3 className="text-lg font-bold text-[#0F1B3D]">No courses match your filters</h3>
-              <p className="text-sm text-[#536078] mt-1.5 mb-5">Try lowering your price range or switching categories.</p>
+              <h3 className="text-lg font-bold text-[#1F4D3A]">No courses match your filters</h3>
+              <p className="text-sm text-[#5A6B63] mt-1.5 mb-5">Try lowering your price range or switching categories.</p>
               <button
                 type="button"
                 onClick={() => { resetAllFilters(); setCoursePage(1) }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#6D3DF5] to-[#3478F6] text-white text-[12.5px] font-bold shadow-sm transition-all duration-300 active:scale-95"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#E07B22] text-white text-[12.5px] font-bold shadow-[0_10px_24px_-10px_rgba(224,123,34,0.8)] hover:bg-[#C96A18] transition-all duration-300 active:scale-95"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Reset Filters
               </button>
@@ -1730,559 +3113,667 @@ export function LandingPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-1.5 mt-10">
-              <button
-                type="button"
-                onClick={() => setCoursePage((p) => Math.max(1, p - 1))}
-                disabled={effectivePage === 1}
-                aria-label="Previous page"
-                className={cn('w-9 h-9 rounded-xl border flex items-center justify-center transition-all active:scale-95',
-                  effectivePage === 1 ? 'border-[#E9E7F5] bg-[#F8FAFC] text-[#C3BDDC] cursor-not-allowed' : 'border-[#E9E7F5] bg-white text-[#536078] hover:border-[#6D3DF5]/40 hover:text-[#6D3DF5]')}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <div className="mt-8 w-full overflow-x-auto pb-1 sm:mt-10">
+              <div className="mx-auto flex min-w-max items-center justify-center gap-1.5 px-1">
                 <button
-                  key={p}
                   type="button"
-                  onClick={() => setCoursePage(p)}
-                  aria-current={effectivePage === p ? 'page' : undefined}
-                  className={cn('min-w-9 h-9 px-2 rounded-xl border text-[12.5px] font-bold tabular-nums transition-all active:scale-95',
-                    effectivePage === p ? 'bg-gradient-to-r from-[#6D3DF5] to-[#3478F6] text-white border-transparent shadow-sm' : 'border-[#E9E7F5] bg-white text-[#536078] hover:border-[#6D3DF5]/40 hover:text-[#6D3DF5]')}
+                  onClick={() => setCoursePage((p) => Math.max(1, p - 1))}
+                  disabled={effectivePage === 1}
+                  aria-label="Previous page"
+                  className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all active:scale-95',
+                    effectivePage === 1 ? 'cursor-not-allowed border-[#E8E4DD] bg-[#F5F1E8] text-[#C4BCA9]' : 'border-[#E8E4DD] bg-white text-[#5A6B63] hover:border-[#E07B22]/50 hover:text-[#E07B22]')}
                 >
-                  {p}
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => setCoursePage((p) => Math.min(totalPages, p + 1))}
-                disabled={effectivePage === totalPages}
-                aria-label="Next page"
-                className={cn('w-9 h-9 rounded-xl border flex items-center justify-center transition-all active:scale-95',
-                  effectivePage === totalPages ? 'border-[#E9E7F5] bg-[#F8FAFC] text-[#C3BDDC] cursor-not-allowed' : 'border-[#E9E7F5] bg-white text-[#536078] hover:border-[#6D3DF5]/40 hover:text-[#6D3DF5]')}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setCoursePage(p)}
+                    aria-current={effectivePage === p ? 'page' : undefined}
+                    className={cn('h-9 min-w-9 shrink-0 rounded-xl border px-2 text-[12.5px] font-bold tabular-nums transition-all active:scale-95',
+                      effectivePage === p ? 'border-transparent bg-[#E07B22] text-white shadow-[0_10px_24px_-10px_rgba(224,123,34,0.8)]' : 'border-[#E8E4DD] bg-white text-[#5A6B63] hover:border-[#E07B22]/50 hover:text-[#E07B22]')}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCoursePage((p) => Math.min(totalPages, p + 1))}
+                  disabled={effectivePage === totalPages}
+                  aria-label="Next page"
+                  className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all active:scale-95',
+                    effectivePage === totalPages ? 'cursor-not-allowed border-[#E8E4DD] bg-[#F5F1E8] text-[#C4BCA9]' : 'border-[#E8E4DD] bg-white text-[#5A6B63] hover:border-[#E07B22]/50 hover:text-[#E07B22]')}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
-          <p className="text-[11px] font-medium text-[#536078] text-center mt-2.5">
-            Showing {paginatedCourses.length} of {filteredAndSortedCourses.length} courses
-          </p>
 
         </Container>
       </section>
 
-      {/* SECTION: Smarter Way to Learn Tech */}
-      <section id="how-it-works" className="relative px-5 py-20 lg:py-24 overflow-hidden">
-        {/* Soft multi-tone gradient background */}
+      {/* SECTION: It's Easy to Start Learning */}
+      <section
+        id="how-it-works"
+        onMouseMove={handleSectionMouseMove}
+        onMouseLeave={resetSectionParallax}
+        className="relative py-12 sm:py-16 lg:py-24 overflow-hidden"
+        style={{ fontFamily: 'var(--font-mona), ui-sans-serif, system-ui, sans-serif' }}
+      >
+        {/* Soft off-white gradient background */}
         <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#F3EEFF] via-white to-[#ECFBF5] opacity-80" />
-          <div className="absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full bg-[#F3EEFF] blur-3xl opacity-70" />
-          <div className="absolute top-1/3 -right-24 w-[380px] h-[380px] rounded-full bg-[#EEF4FF] blur-3xl opacity-60" />
-          <div className="absolute -bottom-32 left-1/3 w-[420px] h-[420px] rounded-full bg-[#ECFBF5] blur-3xl opacity-70" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#FBFAF7] via-white to-[#FFFFFF] opacity-90" />
+          <div className="absolute -top-20 -right-16 w-[240px] h-[240px] rounded-full bg-[#FDEBDD]/70 blur-3xl opacity-60 sm:-top-32 sm:-right-24 sm:w-[420px] sm:h-[420px]" />
+          <div className="absolute top-1/3 -left-16 w-[230px] h-[230px] rounded-full bg-[#DFF3E6]/60 blur-3xl opacity-60 sm:-left-24 sm:w-[380px] sm:h-[380px]" />
+          <div className="absolute -bottom-20 left-1/3 w-[260px] h-[260px] rounded-full bg-white blur-3xl opacity-70 sm:-bottom-32 sm:w-[420px] sm:h-[420px]" />
         </div>
 
-        <Container size="xl" className="relative">
-          {/* Header */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={staggerContainer}
-            className="text-center max-w-[680px] mx-auto mb-12"
-          >
-            <motion.div variants={fadeUp} className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white border border-[#E9E7F5] shadow-sm">
-              <Sparkles className="w-3.5 h-3.5 text-[#6D3DF5]" strokeWidth={2.2} />
-              <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#0F1B3D]">Smarter Learning</span>
-            </motion.div>
-            <motion.h2 variants={fadeUp} className="text-[28px] lg:text-[38px] font-extrabold text-[#0F1B3D] tracking-tight leading-tight mt-4 mb-3">
-              <span className="relative inline-block text-[#0F1B3D]">
-                The Smarter Way
-                <svg className="absolute left-0 -bottom-1.5 w-full h-2.5" viewBox="0 0 140 10" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                  <path d="M3 7 C 40 2, 100 2, 138 6" stroke="#6D3DF5" strokeWidth="4.5" strokeLinecap="round" />
-                </svg>
-              </span>{' '}
-              to Learn Tech
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-sm text-[#536078] leading-relaxed mx-auto line-clamp-2" style={{ maxWidth: 600 }}>
-              Everything you need to master modern tech skills in one platform — guided learning paths, hands-on projects and expert mentorship.
-            </motion.p>
-          </motion.div>
+        {/* Green dotted grid - top left */}
+        <div className="sl-twinkle-green pointer-events-none absolute left-4 top-8 h-20 w-20 opacity-50 [background-image:radial-gradient(rgba(11,93,75,0.45)_1.6px,transparent_1.6px)] [background-size:16px_16px] sm:left-6 sm:top-12 sm:h-28 sm:w-28" aria-hidden="true" />
 
-          {/* Two-column grid */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={staggerContainer}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center"
-          >
-            {/* Left: Video card */}
-            <motion.div variants={fadeUp} className="relative">
-              <div className="relative rounded-[20px] overflow-hidden bg-black shadow-sm ring-1 ring-slate-900/10">
-                {demoVideoPlaying ? (
-                  <div className="relative aspect-video w-full bg-black">
-                    <iframe
-                      className="absolute inset-0 w-full h-full"
-                      src="https://www.youtube.com/embed/bM8XmugoQuI?autoplay=1&rel=0"
-                      title="Course demo video"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                ) : (
-                  <div className="relative aspect-video w-full overflow-hidden bg-black">
-                    <img
-                      src="https://images.unsplash.com/photo-1571260899304-425eee4c7efc"
-                      alt="Student working on a laptop"
-                      className="absolute inset-0 w-full h-full object-cover"
-                      loading="eager"
-                    />
-                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
+        {/* Orange dotted grid - bottom right */}
+        <div className="sl-twinkle-orange pointer-events-none absolute bottom-8 right-4 h-20 w-20 opacity-50 [background-image:radial-gradient(rgba(245,130,32,0.45)_1.6px,transparent_1.6px)] [background-size:16px_16px] sm:bottom-10 sm:right-6 sm:h-28 sm:w-28" aria-hidden="true" />
 
-                    {/* Play button */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <button
-                        type="button"
-                        aria-label="Play video"
-                        onClick={() => setDemoVideoPlaying(true)}
-                        className="group flex items-center justify-center w-16 h-16 rounded-full bg-[#6D3DF5] ring-4 ring-white/25 group-hover:bg-[#5B2FE0] group-hover:scale-110 transition-all duration-300"
-                      >
-                        <Play className="w-6 h-6 text-white fill-white ml-0.5" />
-                      </button>
-                    </div>
+        {/* Light green corner blob - top right */}
+        <div className="pointer-events-none absolute -top-10 right-0 h-48 w-48 sm:-top-14 sm:h-60 sm:w-60 lg:h-72 lg:w-72" aria-hidden="true">
+          <div className="sl-blob-b h-full w-full bg-[#DFF3E6]/90" />
+        </div>
 
-                    {/* Bottom overlay bar */}
-                    <div className="absolute bottom-0 inset-x-0">
-                      <div className="bg-[#0F1B3D]/85 backdrop-blur-sm border-t border-white/10 px-4 py-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span className="w-7 h-7 rounded-md bg-[#6D3DF5]/25 flex items-center justify-center shrink-0">
-                            <Video className="w-3.5 h-3.5 text-[#8B5CF6]" />
+        <Container size="xl" className="relative px-4 sm:px-5 lg:px-8">
+          <div className="grid grid-cols-1 gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-16 items-center">
+            {/* Left: copy + illustration */}
+            <div className="relative">
+              {/* Heading — words rise and unblur one by one */}
+              <h2 className="max-w-full break-words text-[27px] sm:text-[34px] lg:text-[36px] font-bold leading-[1.15] tracking-tight" style={{ fontFamily: 'var(--font-mona), sans-serif' }}>
+                <span className="block text-[#0B5D4B]">
+                  {startLearningLine1.map((w, i) => (
+                    <motion.span
+                      key={w}
+                      initial={prefersReducedMotion ? false : { opacity: 0, y: 24, filter: 'blur(8px)' }}
+                      whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      viewport={{ once: true, margin: '-60px' }}
+                      transition={{ duration: 0.55, delay: prefersReducedMotion ? 0 : 0.3 + i * 0.13, ease: 'easeOut' }}
+                      className="mr-[0.24em] inline-block"
+                    >
+                      <span className={cn('relative', w === 'Easy' && 'inline-block')}>
+                        {w}
+                        {w === 'Easy' && (
+                          <span className="absolute -top-9 -right-5 hidden sm:block" aria-hidden="true">
+                            <svg width="44" height="38" viewBox="0 0 44 38" fill="none">
+                              <path d="M5 33L14 26" stroke="#1F9D6E" strokeWidth="2.4" strokeLinecap="round" className="sl-spark" style={{ animationDelay: '1.02s', transformOrigin: '14px 26px' }} />
+                              <path d="M10 38L15 25" stroke="#1F9D6E" strokeWidth="2.4" strokeLinecap="round" className="sl-spark" style={{ animationDelay: '1.16s', transformOrigin: '15px 25px' }} />
+                              <path d="M2 25L15 31" stroke="#1F9D6E" strokeWidth="2.4" strokeLinecap="round" className="sl-spark" style={{ animationDelay: '1.3s', transformOrigin: '2px 25px' }} />
+                              <path d="M3 18L14 19" stroke="#F58220" strokeWidth="2.4" strokeLinecap="round" className="sl-spark" style={{ animationDelay: '1.44s', transformOrigin: '3px 18px' }} />
+                            </svg>
                           </span>
-                          <p className="text-[13px] font-bold text-white leading-tight truncate">The Smarter Way to Learn Tech — Course Introduction</p>
-                        </div>
-                        <span className="shrink-0 ml-3 text-[11px] font-medium text-white/70 tabular-nums">12:45</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+                        )}
+                      </span>
+                    </motion.span>
+                  ))}
+                </span>
 
-            {/* Right: stacked feature cards */}
-            <div className="space-y-5">
-              {[
-                { icon: BookOpen, bg: 'bg-[#6D3DF5]', title: 'Structured Learning Paths', desc: 'Follow curated, step-by-step roadmaps designed by industry experts.' },
-                { icon: Code, bg: 'bg-[#3478F6]', title: 'Hands-on Projects', desc: 'Build real products and portfolios with project-based, practical learning.' },
-                { icon: MessageCircle, bg: 'bg-[#18A878]', title: 'Expert Mentorship', desc: 'Get 1-on-1 guidance from verified mentors whenever you need it.' },
-              ].map((f) => (
-                <motion.div
-                  key={f.title}
-                  variants={fadeUp}
-                  className="rounded-2xl bg-white border border-[#E9E7F5] p-5 shadow-sm hover:-translate-y-0.5 transition-all duration-300"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={cn('w-[50px] h-[50px] rounded-2xl flex items-center justify-center shrink-0', f.bg)}>
-                      <f.icon className="w-6 h-6 text-white" strokeWidth={2} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[15px] font-extrabold text-[#0F1B3D] leading-tight">{f.title}</p>
-                      <p className="text-[12.5px] text-[#536078] leading-relaxed mt-1">{f.desc}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Feature tags row */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={staggerContainer}
-            className="flex flex-wrap items-center justify-center gap-3 mt-12"
-          >
-            {[
-              { icon: Radio, color: 'text-[#6D3DF5]', border: 'border-[#6D3DF5]/30', label: 'Interactive Live Classes' },
-              { icon: MessageSquare, color: 'text-[#3478F6]', border: 'border-[#3478F6]/30', label: 'Instant Feedback System' },
-              { icon: UserCheck, color: 'text-[#18A878]', border: 'border-[#18A878]/30', label: 'Career Mentorship' },
-              { icon: ShieldCheck, color: 'text-[#F59E0B]', border: 'border-[#F59E0B]/30', label: 'Job-Ready Certifications' },
-              { icon: Smartphone, color: 'text-[#6D3DF5]', border: 'border-[#6D3DF5]/30', label: 'Cross-Device Sync' },
-            ].map((t, i) => (
-              <motion.span
-                key={t.label}
-                variants={fadeUp}
-                className={cn('inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border shadow-sm transition-transform duration-300 hover:-translate-y-0.5', t.border)}
-              >
-                <t.icon className={cn('w-4 h-4', t.color)} strokeWidth={2.2} />
-                <span className="text-[12px] font-bold text-[#0F1B3D] whitespace-nowrap">{t.label}</span>
-              </motion.span>
-            ))}
-          </motion.div>
-
-          {/* Bottom stats bar */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-            className="mt-10 bg-white border border-[#E9E7F5] rounded-2xl px-6 py-7 lg:py-8 shadow-sm"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 lg:gap-4">
-              {[
-                { icon: GraduationCap, tint: 'bg-[#F3EEFF]', color: 'text-[#6D3DF5]', label: 'Expert Instructors' },
-                { icon: Play, tint: 'bg-[#EEF4FF]', color: 'text-[#3478F6]', label: 'Video Lessons' },
-                { icon: GitFork, tint: 'bg-[#ECFBF5]', color: 'text-[#18A878]', label: 'Learning Paths' },
-                { icon: Users, tint: 'bg-[#FEF5E7]', color: 'text-[#F59E0B]', label: 'Active Learners' },
-              ].map((s, i) => (
-                <motion.div key={s.label} className={cn('flex items-center gap-4 rounded-[14px] px-4 lg:px-5 py-5 lg:justify-center', s.tint)}>
-                  <motion.div
-                    animate={prefersReducedMotion ? {} : [
-                      { scale: [1, 1.15, 1] },
-                      { y: [0, -5, 0] },
-                      { rotate: [-8, 8, -8] },
-                      { x: [0, 3, -3, 0] },
-                    ][i]}
-                    transition={prefersReducedMotion ? {} : { duration: 2.4, repeat: Infinity, ease: 'easeInOut', delay: i * 0.3 }}
-                    className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm"
-                  >
-                    <s.icon className={cn('w-5 h-5', s.color)} strokeWidth={2.2} />
-                  </motion.div>
-                  <div className="flex flex-col">
-                    <span className={cn('text-[24px] leading-none font-extrabold tabular-nums', s.color)}>
-                      {[dynamicStats.instructors, dynamicStats.videoLessons, dynamicStats.learningPaths, dynamicStats.activeLearners][i]}
+                <span className="relative z-10 mt-2 block">
+                  <span className="relative inline-block overflow-hidden">
+                    <span className="relative z-10 inline-block text-[#F58220]">
+                      {startLearningLine2.map((w, i) => (
+                        <motion.span
+                          key={w}
+                          initial={prefersReducedMotion ? false : { opacity: 0, y: 24, filter: 'blur(8px)' }}
+                          whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+                          viewport={{ once: true, margin: '-60px' }}
+                          transition={{ duration: 0.55, delay: prefersReducedMotion ? 0 : 0.56 + i * 0.13, ease: 'easeOut' }}
+                          className="mr-[0.24em] inline-block"
+                        >
+                          {w}
+                        </motion.span>
+                      ))}
                     </span>
-                    <span className="text-[12px] font-semibold text-[#536078] mt-1.5 whitespace-nowrap">{s.label}</span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </Container>
-      </section>
+                    {/* Orange shimmer sweep once after the words appear */}
+                    <span className="sl-shimmer-sweep pointer-events-none absolute inset-y-0 -left-8 z-20 w-1/2 bg-gradient-to-r from-transparent via-[#FFC58A]/80 to-transparent opacity-0" aria-hidden="true" />
+                  </span>
 
-      {/* SECTION: Expert Instructors - Meet Our Expert Instructors */}
-      <section id="instructors" className="relative px-5 py-20 lg:py-24 bg-white overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.4] [background-image:linear-gradient(to_right,rgba(15,27,61,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,27,61,0.035)_1px,transparent_1px)] [background-size:46px_46px]" />
-        {/* Soft atmospheric glows */}
-        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-[#F3EEFF]/70 blur-3xl pointer-events-none" />
-        <div className="absolute top-1/2 -right-28 w-80 h-80 rounded-full bg-[#EEF4FF]/70 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 left-1/3 w-80 h-80 rounded-full bg-[#ECFBF5]/70 blur-3xl pointer-events-none" />
+                  {/* Hand-drawn curved orange underline (pen-stroke draw) */}
+                  <svg className="absolute -bottom-3 left-1 h-[10px] w-[200px] max-w-full sm:w-[240px] lg:w-[290px]" viewBox="0 0 240 12" fill="none" preserveAspectRatio="none" aria-hidden="true">
+                    <motion.path
+                      d="M5 8.5 C 55 2.5, 130 2, 236 6.5"
+                      stroke="#F58220"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                      initial={prefersReducedMotion ? false : { pathLength: 0 }}
+                      whileInView={prefersReducedMotion ? undefined : { pathLength: 1 }}
+                      viewport={{ once: true, margin: '-60px' }}
+                      transition={{ duration: 0.9, delay: 1.05, ease: 'easeInOut' }}
+                    />
+                  </svg>
+                </span>
+              </h2>
 
-        <Container size="xl" className="relative">
-          {/* Header */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={staggerContainer}
-            className="text-center max-w-[680px] mx-auto mb-12"
-          >
-            <motion.div variants={fadeUp}>
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#F3EEFF] via-white to-[#EEF4FF] border border-[#6D3DF5]/20 shadow-chip mb-4">
-                <GraduationCap className="w-3.5 h-3.5 text-[#6D3DF5]" />
-                <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#6D3DF5]">Our Instructors</span>
-              </span>
-            </motion.div>
-            <motion.h2 variants={fadeUp} className="text-[26px] lg:text-[34px] font-extrabold text-[#0F1B3D] tracking-tight leading-tight">
-              Meet Our Expert Instructors
-            </motion.h2>
-            <motion.p variants={fadeUp} className="text-[13.5px] text-[#536078] leading-relaxed mx-auto mt-3 line-clamp-2" style={{ maxWidth: 480 }}>
-              Learn directly from verified industry experts with real-world experience and proven strategies to accelerate your growth.
-            </motion.p>
-
-            <motion.div variants={fadeUp} className="flex flex-wrap items-center justify-center gap-3 mt-6">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white border border-[#6D3DF5]/20 px-4 py-2 shadow-chip">
-                <BookOpen className="w-4 h-4 text-[#6D3DF5]" />
-                <span className="text-[12.5px] font-extrabold text-[#0F1B3D]">37+ <span className="text-[#6D3DF5]">Expert Courses</span></span>
-              </span>
-              <span className="inline-flex items-center gap-2 rounded-full bg-white border border-[#18A878]/20 px-4 py-2 shadow-chip">
-                <Users className="w-4 h-4 text-[#18A878]" />
-                <span className="text-[12.5px] font-extrabold text-[#0F1B3D]">37+ <span className="text-[#18A878]">Expert Mentors</span></span>
-              </span>
-            </motion.div>
-          </motion.div>
-
-          {/* Instructor cards */}
-          <div
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            {expertInstructors.slice(expertPage * 4, expertPage * 4 + 4).map((expert) => (
-              <div
-                key={expert.id}
-                className="group relative flex flex-col rounded-2xl bg-white border border-[#E9E7F5] p-4 ring-1 ring-black/[0.02]  transition-all duration-300 hover:-translate-y-1.5"
+              <motion.p
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
+                whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-80px' }}
+                transition={{ duration: 0.5, delay: prefersReducedMotion ? 0 : 0.75, ease: 'easeOut' }}
+                className="mt-5 max-w-[460px] text-[14px] leading-relaxed text-[#4B5563] sm:mt-7 sm:text-[16px]"
               >
-                {/* Photo with soft glow */}
-                <div className="relative">
-                  <div className={cn('absolute -top-4 -left-4 w-28 h-28 rounded-3xl blur-2xl opacity-70 pointer-events-none', expert.glow)} />
-                  <div className="relative w-full aspect-[4/4] rounded-2xl overflow-hidden">
-                    <Image src={expert.image} alt={expert.name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw" className="object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/25 to-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-100" />
+                Join today and take your first step towards a brighter future. Learn at your own pace, from anywhere in the world.
+              </motion.p>
+
+              {/* Illustration */}
+              <motion.div
+                style={{ x: girlParallaxX, y: girlParallaxY }}
+                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.94 }}
+                whileInView={prefersReducedMotion ? undefined : { opacity: 1, scale: 1 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="relative mx-auto mt-8 w-full max-w-[520px] sm:mt-10 lg:mt-14"
+              >
+                {/* Soft white glow */}
+                <div className="absolute inset-4 rounded-[48px] bg-white blur-2xl" aria-hidden="true" />
+
+                {/* Orange/yellow blob - right of image */}
+                <motion.div style={{ x: blobRightParX, y: blobRightParY }} className="absolute -right-3 top-8 sm:-right-6 sm:top-10 lg:-right-10" aria-hidden="true">
+                  <div className="sl-blob-a h-40 w-40 sm:h-52 sm:w-52 lg:h-64 lg:w-64 bg-gradient-to-br from-[#FFE9B8] to-[#FFC98D]/80" />
+                </motion.div>
+
+                {/* Light green blob - bottom-left */}
+                <motion.div style={{ x: blobLeftParX, y: blobLeftParY }} className="absolute -bottom-8 -left-3 sm:-bottom-10 sm:-left-6 lg:-left-10" aria-hidden="true">
+                  <div className="sl-blob-b h-40 w-40 sm:h-48 sm:w-48 lg:h-56 lg:w-56 bg-gradient-to-tr from-[#C7EED6] to-[#E9FBE9]/90" />
+                </motion.div>
+
+                {/* Girl image - slides in with scale-up, then floats */}
+                <div className="relative z-10">
+                  <motion.div
+                    animate={prefersReducedMotion ? {} : { y: [0, -12, 0] }}
+                    transition={prefersReducedMotion ? {} : { duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                    className="relative"
+                  >
+                    <img
+                      src="/girl-learning.png"
+                      alt="Smiling student wearing a green hijab, learning with headphones and a laptop"
+                      loading="eager"
+                      draggable={false}
+                      className="relative mx-auto w-full select-none rounded-[24px] object-contain"
+                    />
+                  </motion.div>
+                </div>
+
+                {/* Play button - bottom-left of image */}
+                <div className="absolute bottom-10 left-2 z-20 sm:bottom-16 sm:left-10">
+                  <button
+                    type="button"
+                    aria-label="Play course introduction video"
+                    onClick={() => setDemoVideoPlaying(true)}
+                    className="group relative flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-[0_14px_32px_-10px_rgba(11,93,75,0.4)] ring-1 ring-black/5 transition-transform duration-300 hover:scale-110 sm:h-16 sm:w-16"
+                  >
+                    <span className="sl-play-ring absolute inset-0 rounded-full border-2 border-[#0B5D4B]/25" aria-hidden="true" />
+                    <span className="sl-play-ring-delay absolute inset-0 rounded-full border-2 border-[#0B5D4B]/15" aria-hidden="true" />
+                    <Play className="ml-0.5 h-5 w-5 text-[#0B5D4B] fill-current transition-transform duration-300 group-hover:translate-x-0.5 sm:h-6 sm:w-6" />
+                  </button>
+                </div>
+
+                {/* Graduation cap - top right of image */}
+                <motion.div style={{ x: capParallaxX, y: capParallaxY }} className="absolute -top-4 right-0 z-20 sm:-top-6 sm:right-6" aria-hidden="true">
+                  <motion.div
+                    animate={prefersReducedMotion ? {} : { rotate: [0, -10, 6, 0], y: [0, -6, 0] }}
+                    transition={prefersReducedMotion ? {} : { duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
+                    className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0B5D4B] shadow-[0_16px_30px_-10px_rgba(11,93,75,0.5)] sm:h-16 sm:w-16 sm:rounded-2xl"
+                  >
+                    <GraduationCap className="h-6 w-6 text-white sm:h-8 sm:w-8" strokeWidth={2.1} />
+                  </motion.div>
+                </motion.div>
+
+                {/* Plant + stacked books - bottom-left */}
+                <div className="absolute -bottom-8 left-0 z-20 hidden items-end gap-3 sm:flex" aria-hidden="true">
+                  <div className="flex items-end">
+                    <div className="h-4 w-14 rounded-sm bg-[#2F7BF6]/90" />
+                    <div className="ml-1.5 h-5 w-16 rounded-sm bg-[#F58220]/90" />
+                    <div className="ml-1.5 h-4 w-14 rounded-sm bg-[#0B5D4B]/90" />
                   </div>
-                  {/* Rating badge top-right */}
-                  <div className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 ">
-                    <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
-                    <span className="text-[12px] font-extrabold text-[#0F1B3D] leading-none">{expert.rating}</span>
-                  </div>
-                  {/* Social badges left edge (revealed on hover) */}
-                  <div className="absolute left-2.5 top-1/2 -translate-y-1/2 flex flex-col gap-2 opacity-0 translate-x-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0">
-                    {[
-                      { icon: Linkedin, label: 'LinkedIn', href: `https://www.linkedin.com/in/${expert.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` },
-                      { icon: Github, label: 'GitHub', href: `https://github.com/${expert.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` },
-                      { icon: Globe, label: 'Website', href: `https://${expert.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.dev` },
-                    ].map(({ icon: Icon, label, href }) => (
-                      <a
-                        key={label}
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={label}
-                        className="w-8 h-8 rounded-full bg-white text-[#0F1B3D] shadow-md flex items-center justify-center transition-all duration-300 hover:text-white hover:bg-[#6D3DF5] hover:-translate-y-0.5"
+                  <svg width="52" height="58" viewBox="0 0 52 58" fill="none" className="mb-3">
+                    <path d="M26 22 C 32 14, 44 14, 46 6 C 40 8, 30 6, 26 2 C 22 6, 12 8, 6 6 C 8 14, 20 14, 26 22 Z" fill="#2FA96F" />
+                    <path d="M26 22 C 22 28, 14 30, 8 28 C 10 20, 20 14, 26 14 Z" fill="#3AB97B" />
+                    <path d="M26 22 C 30 28, 38 30, 44 28 C 42 20, 32 14, 26 14 Z" fill="#34B077" />
+                    <path d="M25 22 L 26 44" stroke="#1F9D6E" strokeWidth="3" strokeLinecap="round" />
+                    <path d="M15 44 L 37 44 L 34 56 L 18 56 Z" fill="#E8630A" />
+                    <rect x="13" y="40" width="26" height="5" rx="2" fill="#F58220" />
+                  </svg>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Right: 5 steps */}
+            <div className="relative min-w-0 lg:pl-4">
+              <div className="relative rounded-[24px] border border-[#ECEAE2] bg-white/80 p-4 shadow-[0_24px_70px_-42px_rgba(11,93,75,0.5)] backdrop-blur-sm sm:rounded-[28px] sm:p-6 lg:p-8">
+                <div ref={stepsListRef} className="relative">
+                  {/* Dotted connector line (base) */}
+                  <div className="absolute bottom-8 left-11 top-8 hidden w-[3px] border-l-[3px] border-dotted border-[#D8CFC2] md:block" aria-hidden="true" />
+
+                  {/* Line draws itself downward on scroll */}
+                  <motion.div
+                    style={{ scaleY: stepsProgress.scrollYProgress }}
+                    className="absolute bottom-8 left-11 top-8 hidden w-[3px] origin-top rounded-full bg-gradient-to-b from-[#0B5D4B] to-[#3AB97B] md:block"
+                    aria-hidden="true"
+                  />
+
+                  {/* Glowing dot travels down the line */}
+                  <motion.div style={{ top: glowDotTop }} className="absolute left-9 z-20 hidden md:block" aria-hidden="true">
+                    <span className="relative flex h-4 w-4">
+                      <span className="absolute inset-0 rounded-full bg-[#0B5D4B]/30 blur-[2px]" />
+                      <span className="relative h-4 w-4 rounded-full bg-[#0B5D4B] ring-4 ring-[#0B5D4B]/15" />
+                    </span>
+                  </motion.div>
+
+                  <div className="space-y-3 sm:space-y-5 lg:space-y-6">
+                    {startLearningSteps.map((s, i) => (
+                      <motion.div
+                        key={s.title}
+                        initial={prefersReducedMotion ? false : { opacity: 0, x: 56 }}
+                        whileInView={prefersReducedMotion ? undefined : { opacity: 1, x: 0 }}
+                        viewport={{ once: true, margin: '-40px' }}
+                        transition={{ duration: 0.55, delay: prefersReducedMotion ? 0 : i * 0.12, ease: [0.22, 1, 0.36, 1] }}
+                        className="group relative flex items-start rounded-2xl p-2 sm:p-3"
                       >
-                        <Icon className="w-4 h-4" />
-                      </a>
+                        <div className="flex min-w-0 items-start gap-3 transition-transform duration-300 group-hover:translate-x-[6px] sm:gap-5">
+                          {/* Icon tile pops in with a bounce */}
+                          <motion.div
+                            initial={prefersReducedMotion ? false : { scale: 0, rotate: -10 }}
+                            whileInView={prefersReducedMotion ? undefined : { scale: 1, rotate: 0 }}
+                            viewport={{ once: true, margin: '-40px' }}
+                            transition={prefersReducedMotion ? {} : { type: 'spring', stiffness: 300, damping: 16, delay: 0.06 + i * 0.12 }}
+                            className="relative z-10 shrink-0"
+                          >
+                            <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-[1.08] sm:h-16 sm:w-16 sm:rounded-2xl', s.tile)}>
+                              <s.icon className={cn('h-5 w-5 sm:h-7 sm:w-7', s.iconColor)} strokeWidth={2.1} />
+                            </div>
+                          </motion.div>
+                          <div className="min-w-0 pt-1.5">
+                            <p className="break-words text-[15px] font-semibold leading-snug text-[#0B5D4B] transition-colors duration-300 group-hover:text-[#F58220] sm:text-[18px]">{s.title}</p>
+                            <p className="mt-1 break-words text-[12.5px] leading-relaxed text-[#4B5563] line-clamp-4 sm:text-[14px] sm:line-clamp-2">{s.desc}</p>
+                          </div>
+                        </div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
-
-                {/* Name / title */}
-                <div className="mt-4 text-center">
-                  <p className="text-[15px] font-extrabold text-[#0F1B3D] leading-tight">{expert.name}</p>
-                  <p className={cn('text-[12px] font-bold mt-0.5', expert.accent)}>{expert.title}</p>
-                  <p className="text-[12px] text-[#536078] leading-relaxed mt-2 line-clamp-2">{expert.bio}</p>
-                </div>
-
-                {/* Stats row */}
-                <div className="mt-4 pt-4 border-t border-[#E9E7F5] flex items-center justify-center gap-6 text-[11px] text-[#536078]">
-                  <span className="inline-flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-[#6D3DF5]" />
-                    {expert.courses}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-[#18A878]" />
-                    {expert.students}
-                  </span>
-                </div>
               </div>
-            ))}
+            </div>
           </div>
 
-          {/* Pagination + CTA */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-            className="mt-10 flex flex-col items-center gap-6"
-          >
-            <div className="flex items-center gap-6">
-              <button
-                type="button"
-                aria-label="Previous instructors"
-                onClick={() => setExpertPage((p) => (p - 1 + expertTotalPages) % expertTotalPages)}
-                className="w-10 h-10 rounded-full border border-[#E9E7F5] bg-white text-[#0F1B3D] shadow-chip flex items-center justify-center transition-all duration-300 hover:bg-[#F3EEFF] hover:text-[#6D3DF5] "
+          {/* Demo video modal opened by the play button */}
+          <AnimatePresence>
+            {demoVideoPlaying && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setDemoVideoPlaying(false)}
+                className="fixed inset-0 z-[70] flex items-center justify-center bg-[#0B3B2E]/70 p-3 backdrop-blur-sm sm:p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Course introduction video"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              <div className="flex items-center gap-2">
-                {Array.from({ length: expertTotalPages }).map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-label={`Instructor page ${i + 1}`}
-                    onClick={() => setExpertPage(i)}
-                    className={cn('h-2 rounded-full transition-all', expertPage === i ? 'w-7 bg-[#6D3DF5]' : 'w-2 bg-[#D9D5E8]')}
+                <motion.div
+                  initial={{ scale: 0.92, y: 16, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  exit={{ scale: 0.95, y: 10, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative aspect-video w-full max-w-3xl overflow-hidden rounded-2xl bg-black shadow-2xl"
+                >
+                  <iframe
+                    className="absolute inset-0 h-full w-full"
+                    src="https://www.youtube.com/embed/bM8XmugoQuI?autoplay=1&rel=0"
+                    title="Course demo video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
                   />
-                ))}
-              </div>
+                  <button
+                    type="button"
+                    aria-label="Close video"
+                    onClick={() => setDemoVideoPlaying(false)}
+                    className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur transition-colors hover:bg-white/30 sm:right-3 sm:top-3 sm:h-9 sm:w-9"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Container>
+      </section>
 
-              <button
-                type="button"
-                aria-label="Next instructors"
-                onClick={() => setExpertPage((p) => (p + 1) % expertTotalPages)}
-                className="w-10 h-10 rounded-full border border-[#E9E7F5] bg-white text-[#0F1B3D] shadow-chip flex items-center justify-center transition-all duration-300 hover:bg-[#F3EEFF] hover:text-[#6D3DF5] "
+      {/* SECTION: Expert Instructors - Meet Our World-Class Experts */}
+      <section id="instructors" className="relative overflow-hidden bg-[#F8F5F2] py-16 sm:py-20 lg:py-24">
+        {/* Soft cream ambience */}
+        <div aria-hidden="true" className="pointer-events-none absolute -top-28 -right-24 w-[380px] h-[380px] rounded-full bg-white blur-3xl opacity-70" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-24 w-[380px] h-[380px] rounded-full bg-white blur-3xl opacity-70" />
+
+        <Container size="xl" className="relative">
+          <div className="grid grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.55fr)] lg:gap-14">
+            {/* Left column — copy */}
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-80px' }}
+              variants={staggerContainer}
+              className="lg:max-w-[380px]"
+            >
+              {/* Pill badge */}
+              <motion.div variants={fadeUp}>
+                <span className="inline-flex items-center gap-2 rounded-full bg-white border border-[#1A453B]/15 px-3.5 py-1.5 shadow-sm">
+                  <GraduationCap className="w-4 h-4 text-[#D87827]" />
+                  <span className="text-sm font-medium text-[#1A453B]">Instructors</span>
+                </span>
+              </motion.div>
+
+              {/* Heading */}
+              <motion.h2
+                variants={fadeUp}
+                className="mt-5 text-[30px] sm:text-[36px] font-medium leading-[1.1] tracking-tight text-[#1A453B]"
               >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                Meet our world-class
+                <span className="block">
+                  expert{' '}
+                  <em className="relative inline-block font-serif italic font-normal text-[#E07B22] [font-size:1.15em] tracking-[-0.01em] align-baseline">instructors</em>
+                </span>
+              </motion.h2>
+
+              {/* CTA button */}
+              <motion.div variants={fadeUp} className="mt-8">
+                <Link
+                  href="/instructors"
+                  prefetch
+                  scroll
+                  className="group inline-flex items-center gap-4 rounded-[10px] border border-[#1A453B]/25 bg-white py-[3px] pl-5 pr-[3px] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md cursor-pointer"
+                >
+                  <span className="text-sm font-medium text-[#1A453B] whitespace-nowrap">View All Instructors</span>
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#D87827] text-white transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                    <ArrowUpRight className="h-[18px] w-[18px]" strokeWidth={2.4} />
+                  </span>
+                </Link>
+              </motion.div>
+            </motion.div>
+
+            {/* Right column — expert grid */}
+            <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
+              {expertInstructors.slice(0, 4).map((expert) => (
+                <motion.div
+                  key={expert.id}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: '-60px' }}
+                  variants={fadeUp}
+                  className="group min-w-0 rounded-2xl border border-[#1A453B]/10 bg-white p-2 shadow-mentor transition-all duration-300 hover:-translate-y-2 hover:shadow-mentor-hover"
+                >
+                  {/* Portrait */}
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[#ECEEF0]">
+                    <Image
+                      src={expert.image}
+                      alt={expert.name}
+                      fill
+                      sizes="(max-width: 639px) calc(100vw - 40px), (max-width: 1023px) 50vw, 33vw"
+                      className="object-cover object-top transition-transform duration-700 group-hover:scale-[1.05]"
+                    />
+                    {/* Rating badge — top-left */}
+                    <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-white px-2 py-1 shadow-sm">
+                      <Star className="w-3.5 h-3.5 fill-[#1A453B] text-[#1A453B]" />
+                      <span className="text-[13px] font-semibold leading-none text-[#1A453B]">{expert.rating}</span>
+                    </div>
+                  </div>
+
+                  {/* Info bar */}
+                  <div className="mt-1.5 flex flex-col items-start gap-2.5 rounded-xl bg-[#F8F5F2] px-4 py-3 transition-colors duration-300 group-hover:bg-[#1A453B] min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between min-[360px]:gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[20px] font-semibold leading-tight text-[#1A453B] truncate transition-colors duration-300 group-hover:text-white">{expert.name}</p>
+                      <p className="mt-0.5 text-[14px] leading-tight text-[#8A8A8A] truncate transition-colors duration-300 group-hover:text-white/70">{expert.title}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3 text-[#1A453B]/25 transition-colors duration-300 group-hover:text-white/60">
+                      <a
+                        href={`https://twitter.com/${expert.name.toLowerCase().replace(/[^a-z0-9]+/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${expert.name} on X`}
+                        className="transition-colors hover:text-[#D87827]"
+                      >
+                        <Twitter className="w-4 h-4" />
+                      </a>
+                      <a
+                        href={`https://www.linkedin.com/in/${expert.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${expert.name} on LinkedIn`}
+                        className="transition-colors hover:text-[#D87827]"
+                      >
+                        <Linkedin className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
-          </motion.div>
+          </div>
         </Container>
       </section>
 
       {/* SECTION 3: Choose Your Learning Plan — Pricing */}
-      <section id="pricing" className="relative px-5 py-20 lg:py-24 bg-white overflow-hidden">
+      <section id="pricing" className="relative overflow-hidden bg-[#F8F5F0] py-16 sm:py-20 lg:py-24" style={{ fontFamily: 'var(--font-mona), sans-serif' }}>
         <Container size="xl" className="relative">
-          {/* Soft background glows */}
-          <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-[#F3EEFF] blur-3xl opacity-70 pointer-events-none" />
-          <div className="absolute top-1/3 -right-24 w-72 h-72 rounded-full bg-[#EEF4FF] blur-3xl opacity-70 pointer-events-none" />
-          <div className="absolute -bottom-24 left-1/3 w-72 h-72 rounded-full bg-[#ECFBF5] blur-3xl opacity-70 pointer-events-none" />
 
           {/* Header */}
-          <div className="text-center max-w-[650px] mx-auto mb-10">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-[#ECFBF5] via-white to-[#EEF4FF] border border-[#18A878]/20 mb-4 shadow-sm">
-              <span className="text-xs">💎</span>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#18A878]">Flexible Plans</span>
-            </div>
-            <h2 className="text-[26px] lg:text-[34px] font-extrabold text-[#0F1B3D] tracking-tight leading-tight mb-2">
+          <div className="mx-auto mb-10 max-w-[720px] text-center sm:mb-12 lg:mb-14">
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 28, filter: 'blur(10px)' }}
+              whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+            >
+              <span className="inline-flex items-center gap-2 rounded-full bg-white border border-[#E8E4DD] px-4 py-2 shadow-[0_6px_18px_-10px_rgba(31,77,58,0.28)]">
+                <Sparkles className="w-3.5 h-3.5 text-[#E07B22]" strokeWidth={2.2} />
+                <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#1F4D3A]">Flexible Plans</span>
+              </span>
+            </motion.div>
+            <motion.h2
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 28, filter: 'blur(10px)' }}
+              whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.55, delay: prefersReducedMotion ? 0 : 0.05, ease: 'easeOut' }}
+              className="mt-5 text-[30px] sm:text-[36px] font-bold tracking-tight leading-[1.08] text-[#1F4D3A]"
+            >
               Choose Your Learning Plan
-            </h2>
-            <h3 className="text-[20px] lg:text-[24px] font-semibold text-[#0F1B3D] mb-3 capitalize">
-              Start Free, Upgrade to Unlock Earning Power
-            </h3>
-            <p className="text-sm text-[#536078] leading-relaxed mx-auto max-w-[640px] line-clamp-2">
-              Whether you're exploring or ready to commit, we have a plan that fits. Higher tiers unlock faster access to freelance gigs, job placements, and higher referral commissions.
-            </p>
+            </motion.h2>
+            <motion.p
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 24, filter: 'blur(8px)' }}
+              whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.55, delay: prefersReducedMotion ? 0 : 0.1, ease: 'easeOut' }}
+              className="mt-4 text-[15px] text-[#6B7280] leading-relaxed mx-auto max-w-[600px]"
+            >
+              Whether you&apos;re exploring or ready to commit, we have a plan that fits. Higher tiers unlock faster access to freelance gigs, job placements, and higher referral commissions.
+            </motion.p>
 
             {/* Billing toggle */}
-            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#F3EEFF] border border-[#6D3DF5]/15 mt-7 shadow-chip">
-              <button
-                onClick={() => setBilling('monthly')}
-                className={cn(
-                  'px-5 py-2 rounded-full text-[12px] font-bold transition-all duration-200',
-                  billing === 'monthly'
-                    ? 'bg-[#6D3DF5] text-white shadow-sm'
-                    : 'text-[#536078] hover:text-[#0F1B3D]'
-                )}
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 24 }}
+              whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-80px' }}
+              transition={{ duration: 0.5, delay: prefersReducedMotion ? 0 : 0.2, ease: 'easeOut' }}
+              className="mt-7 flex flex-col items-center gap-3 sm:mt-8 sm:flex-row sm:justify-center sm:gap-4"
+            >
+              <div className="relative inline-flex w-full max-w-[260px] rounded-full border border-[#E8E4DD] bg-[#F4F1EB] p-1.5 shadow-[inset_0_1px_2px_rgba(31,77,58,0.08)] sm:w-auto sm:max-w-none">
+                <motion.span
+                  aria-hidden="true"
+                  className="absolute top-1.5 bottom-1.5 left-1.5 w-[calc(50%-6px)] rounded-full bg-[#1F4D3A] shadow-md"
+                  animate={{ x: billing === 'annual' ? '100%' : '0%' }}
+                  transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setBilling('monthly')}
+                  aria-pressed={billing === 'monthly'}
+                  className={cn(
+                    'relative z-10 flex-1 min-w-[104px] whitespace-nowrap py-2.5 rounded-full text-[13px] font-bold transition-colors duration-200',
+                    billing === 'monthly' ? 'text-white' : 'text-[#6B7280] hover:text-[#1F4D3A]'
+                  )}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBilling('annual')}
+                  aria-pressed={billing === 'annual'}
+                  className={cn(
+                    'relative z-10 flex-1 min-w-[104px] whitespace-nowrap py-2.5 rounded-full text-[13px] font-bold transition-colors duration-200',
+                    billing === 'annual' ? 'text-white' : 'text-[#6B7280] hover:text-[#1F4D3A]'
+                  )}
+                >
+                  Yearly
+                </button>
+              </div>
+              <motion.span
+                key={billing}
+                animate={prefersReducedMotion ? undefined : { scale: [1, 1.16, 1] }}
+                transition={prefersReducedMotion ? undefined : { duration: 0.55, times: [0, 0.45, 1], ease: 'easeInOut' }}
+                className="inline-flex items-center gap-1 rounded-full bg-[#E07B22] px-3 py-1.5 text-white text-[11px] font-extrabold tracking-wide shadow-[0_6px_14px_-6px_rgba(224,123,34,0.55)]"
               >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBilling('annual')}
-                className={cn(
-                  'px-5 py-2 rounded-full text-[12px] font-bold transition-all duration-200 flex items-center gap-1.5',
-                  billing === 'annual'
-                    ? 'bg-[#6D3DF5] text-white shadow-sm'
-                    : 'text-[#536078] hover:text-[#0F1B3D]'
-                )}
-              >
-                Yearly
-                <span className={cn(
-                  'px-1.5 py-0.5 rounded-full text-[9px] font-extrabold',
-                  billing === 'annual' ? 'bg-white/20 text-white' : 'bg-[#ECFBF5] text-[#18A878]'
-                )}>
-                  Save 20%
-                </span>
-              </button>
-            </div>
+                Save 20%
+              </motion.span>
+            </motion.div>
           </div>
 
           {/* Pricing cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch mt-10 max-w-[1100px] mx-auto">
-            {/* — Free Plan — */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-80px' }}
-              variants={fadeUp}
-              className="order-2 md:order-1 relative bg-white rounded-[24px] border border-[#E9E7F5] p-7 flex flex-col text-left h-full ring-1 ring-black/[0.02]  transition-all duration-300 hover:-translate-y-1.5"
-            >
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#F3EEFF] flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-[#6D3DF5]" />
-                </div>
-                <div>
-                  <h3 className="text-[16px] font-bold text-[#0F1B3D] leading-tight">Free</h3>
-                  <p className="text-[11px] text-[#536078]">Explore and get started</p>
-                </div>
-              </div>
-              <div className="flex items-baseline gap-1 mb-5">
-                <span className="text-4xl font-extrabold text-[#0F1B3D] tracking-tight">৳0</span>
-                <span className="text-[13px] text-[#536078] font-medium">/ forever</span>
-              </div>
-              <div className="my-1 border-t border-[#E9E7F5]" />
-              <ul className="space-y-2.5 my-6 flex-1">
-                {['Access to 3 free courses', 'Community forum access', 'Basic certificate', 'Limited freelance marketplace browsing'].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <CheckCircle className="w-4 h-4 text-[#536078] shrink-0 mt-0.5" />
-                    <span className="text-[12.5px] text-[#536078] leading-snug">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => selectPlan('free')} className="w-full py-3 rounded-xl border-2 border-[#6D3DF5] bg-white text-[#6D3DF5] text-[13px] font-bold transition-all duration-200 hover:bg-[#6D3DF5] hover:text-white  active:scale-[0.98]">
-                Start Free
-              </button>
-            </motion.div>
+          <div className="mx-auto mt-2 grid max-w-lg grid-cols-1 items-stretch gap-5 sm:max-w-2xl sm:gap-7 md:grid-cols-2 lg:max-w-[1160px] lg:grid-cols-3 lg:gap-8">
+            {pricingPlans.map((plan, idx) => {
+              const isPro = plan.key === 'pro'
+              const amount = billing === 'annual' ? plan.priceAnnual : plan.priceMonthly
+              return (
+                <motion.div
+                  key={plan.key}
+                  className={cn('h-full', plan.orderClass)}
+                  initial={prefersReducedMotion ? false : { opacity: 0, y: 36, scale: isPro ? 0.94 : 1 }}
+                  whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, margin: '-70px' }}
+                  transition={{ duration: 0.6, delay: prefersReducedMotion ? 0 : idx * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <div className="relative h-full">
+                    {plan.shimmer && (
+                      <div
+                        aria-hidden="true"
+                        className="pricing-pro-halo absolute -inset-3 rounded-[26px] pointer-events-none"
+                        style={{ background: 'radial-gradient(circle at 50% 40%, rgba(224,123,34,0.35), transparent 68%)', filter: 'blur(14px)' }}
+                      />
+                    )}
+                    <div className={cn('h-full', isPro && 'pricing-card-float')}>
+                      <div
+                        className={cn(
+                          'pricing-card relative flex h-full flex-col rounded-[20px] border-2 bg-white px-5 py-7 text-left transition-all duration-300 hover:-translate-y-2.5 sm:px-7 sm:py-8',
+                          plan.borderClass,
+                          plan.hoverBorderClass,
+                          plan.shadowClass,
+                          plan.hoverShadowClass
+                        )}
+                      >
+                        {plan.ribbon && (
+                          <div className="absolute -top-3 left-0 right-0 mx-auto w-fit z-10 inline-flex items-center gap-1.5 rounded-full bg-[#E07B22] px-4 py-1.5 text-white text-[10px] font-extrabold uppercase tracking-[0.14em] shadow-[0_10px_24px_-8px_rgba(224,123,34,0.6)]">
+                            <Sparkles className="w-3 h-3" strokeWidth={2.6} />
+                            Most Popular
+                          </div>
+                        )}
 
-            {/* — Pro Plan (Most Popular) — */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-80px' }}
-              variants={fadeUp}
-              className="order-1 md:order-2 relative bg-white rounded-[24px] border-2 border-[#6D3DF5] p-7 flex flex-col text-left h-full shadow-sm shadow-slate-900/5 md:scale-[1.03] transition-all duration-300 hover:-translate-y-1.5"
-            >
-              <div className="absolute top-0 right-0 px-3.5 py-1.5 rounded-tr-[24px] rounded-bl-[20px] bg-[#6D3DF5] text-white text-[9px] font-bold uppercase tracking-widest shadow-sm flex items-center gap-1">
-                <Award className="w-3 h-3" /> Most Popular
-              </div>
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#6D3DF5] flex items-center justify-center shadow-sm">
-                  <Trophy className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-[16px] font-bold text-[#0F1B3D] leading-tight">Pro</h3>
-                  <p className="text-[11px] text-[#536078]">For serious learners ready to earn</p>
-                </div>
-              </div>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-[#0F1B3D] tracking-tight">{billing === 'annual' ? '৳792' : '৳990'}</span>
-                <span className="text-[13px] text-[#536078] font-medium">/ month</span>
-              </div>
-              {billing === 'annual' && (
-                <p className="text-[11px] text-[#18A878] font-semibold">billed ৳9,504/yr · save ৳2,376</p>
-              )}
-              <div className="my-4 border-t border-[#E9E7F5]" />
-              <ul className="space-y-2.5 my-6 flex-1">
-                {['Full access to all 25+ courses', 'Verified certificates', 'Freelance marketplace access', '15% referral commission', 'Priority job placement support', 'Weekly skill challenges entry'].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <CheckCircle className="w-4 h-4 text-[#18A878] shrink-0 mt-0.5" />
-                    <span className="text-[12.5px] text-[#536078] leading-snug">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => selectPlan('pro')} className="w-full py-3 rounded-xl bg-[#6D3DF5] text-white text-[13px] font-bold shadow-sm transition-all duration-200 hover:bg-[#6D3DF5]/90 active:scale-[0.98]">
-                Get Pro
-              </button>
-            </motion.div>
+                        {plan.shimmer && (
+                          <div
+                            aria-hidden="true"
+                            className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[20px] overflow-hidden"
+                            style={{ background: 'linear-gradient(90deg, #E07B22, #F2A65A, #E07B22)' }}
+                          >
+                            <div className="pricing-shine absolute inset-y-0 w-1/2 bg-white/50 blur-[2px]" />
+                          </div>
+                        )}
 
-            {/* — Premium Plan — */}
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-80px' }}
-              variants={fadeUp}
-              className="order-3 relative bg-gradient-to-b from-[#F3EEFF]/60 to-white rounded-[24px] border border-[#E9E7F5] p-7 flex flex-col text-left h-full ring-1 ring-black/[0.02]  transition-all duration-300 hover:-translate-y-1.5"
-            >
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#3478F6] flex items-center justify-center shadow-sm">
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-[16px] font-bold text-[#0F1B3D] leading-tight">Premium</h3>
-                  <p className="text-[11px] text-[#536078]">Maximum earning potential</p>
-                </div>
-              </div>
-              <div className="flex items-baseline gap-1 mb-1">
-                <span className="text-4xl font-extrabold text-[#0F1B3D] tracking-tight">{billing === 'annual' ? '৳1,592' : '৳1,990'}</span>
-                <span className="text-[13px] text-[#536078] font-medium">/ month</span>
-              </div>
-              {billing === 'annual' && (
-                <p className="text-[11px] text-[#18A878] font-semibold">billed ৳19,104/yr · save ৳4,776</p>
-              )}
-              <div className="my-4 border-t border-[#E9E7F5]" />
-              <ul className="space-y-2.5 my-6 flex-1">
-                {['Everything in Pro', '1-on-1 mentor sessions', '25% referral commission', 'Guaranteed job interview assistance', 'Early access to new courses', 'Dedicated earnings manager'].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <CheckCircle className="w-4 h-4 text-[#3478F6] shrink-0 mt-0.5" />
-                    <span className="text-[12.5px] text-[#536078] leading-snug">{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <button onClick={() => selectPlan('premium')} className="w-full py-3 rounded-xl bg-[#3478F6] text-white text-[13px] font-bold shadow-sm transition-all duration-200 hover:bg-[#3478F6]/90 active:scale-[0.98]">
-                Get Premium
-              </button>
-            </motion.div>
+                      {/* Circular glowing badge */}
+                      <div className="flex justify-center mb-5">
+                        <div className="relative w-[64px] h-[64px]">
+                          <div
+                            aria-hidden="true"
+                            className="pricing-glow absolute -inset-3 rounded-full blur-xl"
+                            style={{ background: `radial-gradient(circle, ${plan.accent}70, transparent 70%)` }}
+                          />
+                          <div
+                            aria-hidden="true"
+                            className="pricing-orbit absolute -inset-3 rounded-full"
+                            style={{ border: `1.5px dashed ${plan.accent}`, opacity: 0.45 }}
+                          >
+                            <span
+                              className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 rounded-full"
+                              style={{ background: plan.accent, boxShadow: `0 0 12px 2px ${plan.accent}` }}
+                            />
+                          </div>
+                          <div
+                            className="pricing-bob relative flex items-center justify-center w-full h-full rounded-full"
+                            style={{
+                              background: `linear-gradient(135deg, ${plan.accent}, ${plan.accentDark})`,
+                              boxShadow: `0 14px 28px -12px ${plan.accent}CC, 0 4px 12px -4px rgba(31,77,58,0.25), inset 0 1px 0 rgba(255,255,255,0.3)`,
+                            }}
+                          >
+                            <plan.icon className="pricing-icon w-7 h-7 text-white" strokeWidth={2} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Name + tagline */}
+                      <div className="text-center mb-4">
+                        <h3 className="text-[22px] font-bold text-[#1F4D3A] tracking-tight leading-tight">{plan.name}</h3>
+                        <p className="mt-1 text-[13px] font-medium text-[#6B7280]">{plan.tagline}</p>
+                      </div>
+
+                      {/* Price */}
+                      <PlanPrice
+                        amount={amount}
+                        period={plan.period}
+                        note={billing === 'annual' ? plan.annualNote : ''}
+                        noFlip={plan.key === 'free'}
+                        prefersReducedMotion={prefersReducedMotion}
+                      />
+
+                      {/* Divider */}
+                      <div className="my-5 border-t border-[#E8E4DD]" />
+
+                      {/* Features */}
+                      <ul className="mb-6 flex-1 space-y-2.5">
+                        {plan.features.map((feat, fi) => (
+                          <motion.li
+                            key={feat}
+                            initial={prefersReducedMotion ? false : { opacity: 0, x: -12 }}
+                            whileInView={prefersReducedMotion ? undefined : { opacity: 1, x: 0 }}
+                            viewport={{ once: true, margin: '-40px' }}
+                            transition={{ duration: 0.45, delay: prefersReducedMotion ? 0 : 0.2 + fi * 0.08, ease: 'easeOut' }}
+                            className="flex items-start gap-2.5 sm:gap-3"
+                          >
+                            <PricingCheck delay={prefersReducedMotion ? 0 : 0.2 + fi * 0.08 + 0.1} prefersReducedMotion={prefersReducedMotion} />
+                            <span className="text-[15px] text-[#6B7280] leading-snug">{feat}</span>
+                          </motion.li>
+                        ))}
+                      </ul>
+
+                      {/* CTA */}
+                      <div className="mt-auto">
+                        <RippleButton
+                          onClick={() => selectPlan(plan.key)}
+                          className={cn(
+                            'w-full py-3.5 rounded-full text-[14px] font-bold transition-all duration-300 active:scale-[0.97]',
+                            plan.ctaClass
+                          )}
+                        >
+                          {plan.cta}
+                        </RippleButton>
+                      </div>
+                    </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
 
         </Container>
@@ -2290,231 +3781,286 @@ export function LandingPage() {
 
 
 {/* SECTION: Turn Your Skills Into Income */}
-      <section id="earn-with-your-skills" className="relative px-5 py-20 lg:py-24 overflow-hidden">
-        {/* Soft multi-tone gradient background */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#F3EEFF] via-white to-[#FEF3E7] opacity-80" />
-          <div className="absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full bg-[#F3EEFF] blur-3xl opacity-70" />
-          <div className="absolute top-1/3 -right-24 w-[400px] h-[400px] rounded-full bg-[#EEF4FF] blur-3xl opacity-60" />
-          <div className="absolute -bottom-32 left-1/3 w-[440px] h-[440px] rounded-full bg-[#ECFBF5] blur-3xl opacity-70" />
+      <section
+        id="earn-with-your-skills"
+        className="relative overflow-hidden py-16 sm:py-20 lg:py-24"
+        style={{ fontFamily: 'var(--font-mona), sans-serif' }}
+      >
+        {/* Soft warm cream background */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[#F8F5F0]">
+          <div className="absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full bg-[#FDEBDD] blur-3xl opacity-60" />
+          <div className="absolute top-1/3 -right-24 w-[400px] h-[400px] rounded-full bg-[#DFF3E6] blur-3xl opacity-50" />
+          <div className="absolute -bottom-32 left-1/3 w-[440px] h-[440px] rounded-full bg-[#E3EFFF] blur-3xl opacity-50" />
         </div>
 
         <Container size="xl" className="relative">
-          {/* Header */}
+          {/* Centered header: full width, one-line sub-heading */}
           <motion.div
-            initial="hidden"
-            whileInView="visible"
+            initial={prefersReducedMotion ? false : 'hidden'}
+            whileInView={prefersReducedMotion ? undefined : 'visible'}
             viewport={{ once: true, margin: '-80px' }}
             variants={staggerContainer}
-            className="text-center max-w-[700px] mx-auto mb-12"
+            className="mx-auto mb-10 max-w-[760px] text-center sm:mb-12"
           >
-            <motion.div variants={fadeUp} className="inline-flex items-center px-4 py-1.5 rounded-full bg-white border border-[#E9E7F5] mb-5 shadow-sm">
-              <span className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#6D3DF5]">Career Ready</span>
-            </motion.div>
-            <motion.h2 variants={fadeUp} className="text-[28px] lg:text-[38px] font-extrabold text-[#0F1B3D] tracking-tight leading-tight break-words">
-              Turn Your Skills <span className="relative inline-block text-[#6D3DF5]">Into Income
-              <svg className="absolute left-0 -bottom-1.5 w-full h-3" viewBox="0 0 150 10" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                <path d="M4 7 C 20 3, 32 3, 48 6 C 62 9, 74 3, 88 5 C 102 7, 114 4, 146 6" stroke="#6D3DF5" strokeWidth="3.5" strokeLinecap="round" />
-              </svg>
+            <motion.div
+              variants={earnFadeUpBlur}
+              className="earn-badge inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white border border-[#E8E4DD] mb-5 shadow-sm"
+            >
+              <span className="relative flex h-2 w-2 items-center justify-center">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-[#E07B22]" />
+                <span className="earn-badge-ping absolute inline-flex h-full w-full rounded-full bg-[#E07B22]" />
               </span>
+              <span className="earn-badge-pulse text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#1F4D3A]">Career Ready</span>
+            </motion.div>
+            <motion.h2
+              variants={earnWordContainer}
+              className="text-[28px] lg:text-[36px] font-bold text-[#1F4D3A] tracking-tight leading-[1.15]"
+            >
+              <motion.span variants={earnWord} className="inline-block">Turn</motion.span>
+              <motion.span variants={earnWord} className="ml-[0.18em] inline-block sm:ml-[0.24em]">Your</motion.span>
+              <motion.span variants={earnWord} className="ml-[0.18em] inline-block sm:ml-[0.24em]">Skills</motion.span>
+              <motion.span variants={earnWord} className="relative ml-[0.18em] inline-block text-[#E07B22] sm:ml-[0.24em]">Into Income
+                <svg className="absolute left-0 -bottom-1.5 w-full h-3" viewBox="0 0 150 10" fill="none" preserveAspectRatio="none" aria-hidden="true">
+                  <motion.path
+                    d="M4 7 C 20 3, 32 3, 48 6 C 62 9, 74 3, 88 5 C 102 7, 114 4, 146 6"
+                    stroke="#E07B22"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    initial={prefersReducedMotion ? false : { pathLength: 0 }}
+                    whileInView={prefersReducedMotion ? undefined : { pathLength: 1 }}
+                    viewport={{ once: true, margin: '-80px' }}
+                    transition={{ delay: 0.45, duration: 0.85, ease: 'easeInOut' }}
+                  />
+                </svg>
+                <motion.span
+                  className="earn-underline-shimmer"
+                  aria-hidden="true"
+                  initial={prefersReducedMotion ? false : { x: '-130%' }}
+                  whileInView={prefersReducedMotion ? undefined : { x: '230%' }}
+                  viewport={{ once: true, margin: '-80px' }}
+                  transition={{ delay: 0.95, duration: 1.05, ease: [0.4, 0, 0.2, 1] }}
+                />
+              </motion.span>
             </motion.h2>
-            <motion.p variants={fadeUp} className="text-sm text-[#536078] leading-relaxed mx-auto mt-4" style={{ maxWidth: 650, overflowWrap: 'anywhere' }}>
+            <motion.p
+              variants={earnFadeUpBlur}
+              className="mx-auto mt-4 max-w-[560px] text-[15px] leading-relaxed text-[#5A6B63] sm:text-[16px]"
+              style={{ overflowWrap: 'anywhere' }}
+            >
               From your first project to your first paycheck, learn the skills that turn your talent into real, sustainable income.
             </motion.p>
           </motion.div>
 
-          {/* Two-column layout */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={staggerContainer}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch"
-          >
-            {/* Left: Photo card */}
-            <motion.div variants={fadeUp} className="relative rounded-[20px] overflow-hidden bg-white border border-[#E9E7F5] shadow-sm h-full">
-              <div className="relative w-full h-full min-h-[320px]">
-                <img
-                  src="https://plain-apac-prod-public.komododecks.com/202608/28/6OEjH5EtzgdMbN5MTnmf/image.jpg"
-                  alt="Freelancer working on a laptop in a warm home office"
-                  className="absolute inset-0 w-full h-full object-cover object-top"
-                />
-                {/* Floating earnings badge */}
-                <div className="absolute top-4 right-4 z-10 w-12 h-12 rounded-full bg-[#6D3DF5] shadow-sm flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-white" strokeWidth={2.4} />
-                </div>
-              </div>
-            </motion.div>
+          {/* Two-column layout: image left, content right */}
+          <div className="grid grid-cols-1 items-stretch gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12">
+            {/* Left: full-height photo with floating overlays */}
+            <EarnImagePanel prefersReducedMotion={prefersReducedMotion} />
 
-            {/* Right: Feature cards */}
-            <div className="flex flex-col justify-center gap-5 h-full">
+            {/* Right: feature cards + stats */}
+            <motion.div
+              initial={prefersReducedMotion ? false : 'hidden'}
+              whileInView={prefersReducedMotion ? undefined : 'visible'}
+              viewport={{ once: true, margin: '-80px' }}
+              variants={staggerContainer}
+              className="flex flex-col justify-center"
+            >
+              <motion.div
+                variants={earnCardContainer}
+                className="flex flex-col gap-5"
+              >
               {[
                 {
                   icon: FolderOpen,
-                  tint: 'bg-[#F3EEFF]',
-                  color: 'text-[#6D3DF5]',
+                  tint: 'bg-[#DFF3E6]',
+                  iconColor: 'text-[#18A878]',
+                  hoverShadow: '0 24px 48px -20px rgba(24,168,120,0.35)',
                   title: 'Job-Ready Projects',
                   desc: 'Build a portfolio of real, industry-aligned projects that prove your skills to employers and clients.',
                 },
                 {
                   icon: UserCheck,
-                  tint: 'bg-[#EEF4FF]',
-                  color: 'text-[#3478F6]',
+                  tint: 'bg-[#FDEBDD]',
+                  iconColor: 'text-[#E07B22]',
+                  hoverShadow: '0 24px 48px -20px rgba(224,123,34,0.38)',
                   title: 'Career Mentorship',
                   desc: 'Get 1-on-1 guidance from experts who help you plan, position, and accelerate your career path.',
                 },
                 {
                   icon: Briefcase,
-                  tint: 'bg-[#ECFBF5]',
-                  color: 'text-[#18A878]',
+                  tint: 'bg-[#E3EFFF]',
+                  iconColor: 'text-[#3478F6]',
+                  hoverShadow: '0 24px 48px -20px rgba(52,120,246,0.35)',
                   title: 'Freelance & Job Support',
                   desc: 'Land your first paid gig or full-time role with resume help, referrals, and hands-on coaching.',
                 },
               ].map((f) => (
                 <motion.div
                   key={f.title}
-                  variants={fadeUp}
-                  className="flex items-center gap-4 rounded-[16px] bg-white border border-[#E9E7F5] px-5 py-4 shadow-sm"
+                  variants={earnCardSlideRight}
+                  whileHover={prefersReducedMotion ? undefined : { y: -6, boxShadow: f.hoverShadow, borderColor: 'rgba(224,123,34,0.25)' }}
+                  transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+                  className="flex items-center gap-3.5 rounded-[16px] border border-[#E8E4DD] bg-white px-4 py-4 shadow-sm sm:gap-4 sm:px-5"
                 >
-                  <div className={cn('w-[50px] h-[50px] rounded-full flex items-center justify-center shrink-0', f.tint)}>
-                    <f.icon className={cn('w-5.5 h-5.5', f.color)} strokeWidth={2.2} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-extrabold text-[#0F1B3D] leading-tight">{f.title}</p>
-                    <p className="text-[12px] text-[#536078] leading-relaxed mt-1">{f.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Feature tags row */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={staggerContainer}
-            className="mt-12"
-          >
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              {[
-                { icon: FolderOpen, color: 'text-[#6D3DF5]', border: 'border-[#6D3DF5]/30', label: 'Portfolio Builder' },
-                { icon: MessageSquare, color: 'text-[#3478F6]', border: 'border-[#3478F6]/30', label: 'Interview Prep' },
-                { icon: Laptop, color: 'text-[#18A878]', border: 'border-[#18A878]/30', label: 'Freelance Marketplace' },
-                { icon: TrendingUp, color: 'text-[#F59E0B]', border: 'border-[#F59E0B]/30', label: 'Salary Insights' },
-                { icon: Users, color: 'text-[#6D3DF5]', border: 'border-[#6D3DF5]/30', label: 'Alumni Network' },
-              ].map((t) => (
-                <motion.div key={t.label} variants={fadeUp}>
-                  <span className={cn('inline-flex items-center gap-2 rounded-full bg-white border px-4 py-2 shadow-sm', t.border)}>
-                    <t.icon className={cn('w-4 h-4', t.color)} strokeWidth={2.2} />
-                    <span className="text-[12.5px] font-extrabold text-[#0F1B3D] leading-none">{t.label}</span>
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Bottom stats bar */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={staggerContainer}
-            className="mt-10"
-          >
-            <div className="bg-white border border-[#E9E7F5] rounded-2xl px-6 py-7 lg:py-8 shadow-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 lg:gap-4">
-                {[
-                  { icon: TrendingUp, tint: 'bg-[#F3EEFF]', color: 'text-[#6D3DF5]', value: '85%', label: 'Job Placement' },
-                  { icon: DollarSign, tint: 'bg-[#EEF4FF]', color: 'text-[#3478F6]', value: '$72K', label: 'Avg Starting Salary' },
-                  { icon: Users, tint: 'bg-[#ECFBF5]', color: 'text-[#18A878]', value: '1.2K+', label: 'Hired Alumni' },
-                  { icon: Building, tint: 'bg-[#FEF5E7]', color: 'text-[#F59E0B]', value: '500+', label: 'Partner Companies' },
-                ].map((s, i) => (
-                  <motion.div key={s.label} className={cn('flex items-center gap-4 rounded-[14px] px-4 lg:px-5 py-5 lg:justify-center', s.tint)}>
-                    <motion.div
-                      animate={prefersReducedMotion ? {} : [
-                        { y: [0, -6, 0], scale: [1, 1.08, 1] },
-                        { rotate: [-10, 10, -10] },
-                        { scale: [1, 1.16, 1] },
-                        { x: [0, 5, -5, 0] },
-                      ][i]}
-                      transition={prefersReducedMotion ? {} : { duration: 2.8, repeat: Infinity, ease: 'easeInOut', delay: i * 0.3 }}
-                      className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm"
-                    >
-                      <s.icon className={cn('w-5 h-5', s.color)} strokeWidth={2.2} />
-                    </motion.div>
-                    <div className="flex flex-col">
-                      <span className={cn('text-[24px] leading-none font-extrabold tabular-nums', s.color)}>{s.value}</span>
-                      <span className="text-[12px] font-semibold text-[#536078] mt-1.5 whitespace-nowrap">{s.label}</span>
-                    </div>
+                  <motion.div
+                    variants={earnIconPop}
+                    whileHover={prefersReducedMotion ? undefined : { rotate: 8, scale: 1.08 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                    className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full sm:h-[50px] sm:w-[50px]', f.tint)}
+                  >
+                    <f.icon className={cn('w-[22px] h-[22px]', f.iconColor)} strokeWidth={2.2} />
                   </motion.div>
-                ))}
-              </div>
-            </div>
-</motion.div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[16px] font-semibold leading-tight text-[#1F4D3A] sm:text-[17px]">{f.title}</p>
+                    <p className="text-[14px] text-[#5A6B63] leading-relaxed mt-1">{f.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+              </motion.div>
+
+              {/* Stat cards */}
+              <motion.div variants={earnStatContainer} className="mt-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {[
+                    { icon: TrendingUp, tint: '#DFF3E6', accent: '#18A878', accentDark: '#0E9E6C', value: 85, decimals: 0, prefix: '', suffix: '%', numberClass: 'text-[#18A878]', label: 'Job Placement', delay: 0 },
+                    { icon: DollarSign, tint: '#FDEBDD', accent: '#E07B22', accentDark: '#C46212', value: 72, decimals: 0, prefix: '$', suffix: 'K', numberClass: 'text-[#E07B22]', label: 'Avg Starting Salary', delay: 0.5 },
+                    { icon: Users, tint: '#E3EFFF', accent: '#3478F6', accentDark: '#2057C9', value: 1.2, decimals: 1, prefix: '', suffix: 'K+', numberClass: 'text-[#3478F6]', label: 'Hired Alumni', delay: 1 },
+                    { icon: Building, tint: '#FEF5E7', accent: '#F59E0B', accentDark: '#D97E06', value: 500, decimals: 0, prefix: '', suffix: '+', numberClass: 'text-[#F59E0B]', label: 'Partner Companies', delay: 1.5 },
+                  ].map((s) => (
+                    <motion.div
+                      key={s.label}
+                      variants={earnStatCard}
+                      whileHover={prefersReducedMotion ? undefined : { y: -6, boxShadow: `0 22px 44px -20px ${s.accent}66` }}
+                      transition={{ type: 'spring', stiffness: 320, damping: 20 }}
+                      className="relative flex flex-col items-center overflow-hidden rounded-2xl border border-[#E8E4DD] p-3.5 text-center shadow-sm sm:p-4"
+                      style={{ background: `linear-gradient(160deg, ${s.tint} 0%, #FFFFFF 72%)` }}
+                    >
+                      <span aria-hidden="true" className="pointer-events-none absolute -top-7 -right-7 w-20 h-20 rounded-full blur-2xl opacity-70" style={{ background: s.accent }} />
+                      <span aria-hidden="true" className="pointer-events-none absolute -bottom-9 -left-9 w-24 h-24 rounded-full border-[6px] opacity-10" style={{ borderColor: s.accent }} />
+
+                      <div className="relative mb-2.5">
+                        <motion.span
+                          aria-hidden="true"
+                          animate={prefersReducedMotion ? undefined : { scale: [1, 1.18, 1], opacity: [0.5, 0.15, 0.5] }}
+                          transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', delay: s.delay }}
+                          className="absolute -inset-1.5 rounded-[18px] border-2"
+                          style={{ borderColor: s.accent }}
+                        />
+                        <motion.div
+                          variants={earnStatIcon}
+                          whileHover={prefersReducedMotion ? undefined : { rotate: 8, scale: 1.1 }}
+                          className="relative w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md"
+                          style={{ background: `linear-gradient(140deg, ${s.accent}, ${s.accentDark})`, boxShadow: `0 10px 22px -8px ${s.accent}99` }}
+                        >
+                          <s.icon className="w-5 h-5 text-white" strokeWidth={2.3} />
+                        </motion.div>
+                      </div>
+
+                      <EarnCountUp
+                        value={s.value}
+                        decimals={s.decimals}
+                        prefix={s.prefix}
+                        suffix={s.suffix}
+                        prefersReducedMotion={prefersReducedMotion}
+                        className={cn('text-[19px] font-extrabold leading-none tabular-nums sm:text-[20px]', s.numberClass)}
+                      />
+                      <span className="mt-1.5 text-[9.5px] font-bold uppercase leading-tight tracking-[0.04em] text-[#5A6B63] sm:text-[9px] sm:tracking-[0.06em]">{s.label}</span>
+
+                      <span aria-hidden="true" className="absolute bottom-0 left-0 right-0 h-[3px]" style={{ background: `linear-gradient(90deg, transparent, ${s.accent}, transparent)` }} />
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          </div>
         </Container>
       </section>
 
 {/* SECTION: What Our Learners Say */}
-      <section id="testimonials" className="relative px-5 py-20 lg:py-24 overflow-hidden">
-        {/* Soft tinted background */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#EEF4FF] via-white to-[#F3EEFF]" />
-        {/* Soft multi-tone gradient blobs */}
+      <section id="testimonials" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+        {/* Warm cream background */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#FFFFFF] via-[#FCFAF6] to-[#F8F5F0]" />
+        {/* Soft warm-tone gradient blobs */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-28 -left-24 w-[420px] h-[420px] rounded-full bg-[#F3EEFF] blur-3xl opacity-70" />
-          <div className="absolute -top-24 -right-20 w-[420px] h-[420px] rounded-full bg-[#EEF4FF] blur-3xl opacity-70" />
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[460px] h-[320px] rounded-full bg-[#ECFBF5] blur-3xl opacity-70" />
+          <div className="absolute -top-28 -left-24 w-[420px] h-[420px] rounded-full bg-[#F3EDE2] blur-3xl opacity-60" />
+          <div className="absolute -top-24 -right-20 w-[420px] h-[420px] rounded-full bg-[#F6F0E6] blur-3xl opacity-60" />
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[460px] h-[320px] rounded-full bg-[#FDEEDF] blur-3xl opacity-50" />
         </div>
 
         <Container size="xl" className="relative">
           {/* Header */}
           <motion.div
-            initial="hidden"
-            whileInView="visible"
+            initial={prefersReducedMotion ? false : 'hidden'}
+            whileInView={prefersReducedMotion ? undefined : 'visible'}
             viewport={{ once: true, margin: '-80px' }}
             variants={staggerContainer}
             className="text-center max-w-[720px] mx-auto"
           >
-            <motion.h2 variants={fadeUp} className="text-[28px] lg:text-[38px] font-extrabold text-[#0F1B3D] tracking-tight leading-tight">
+            <motion.h2 variants={prefersReducedMotion ? undefined : testimonialHeading} className="text-[28px] lg:text-[36px] font-bold text-[#1F4D3A] tracking-tight leading-[1.2]" style={{ fontFamily: "'Mona Sans', sans-serif" }}>
               What Our Learners Say
             </motion.h2>
-            <motion.p variants={fadeUp} className="mt-4 text-sm text-[#536078] leading-relaxed mx-auto">
+            <motion.p variants={fadeUp} className="mt-4 text-sm text-[#6B7280] leading-relaxed mx-auto" style={{ fontFamily: "'Mona Sans', sans-serif" }}>
               Real voices from learners who transformed their skills.
             </motion.p>
           </motion.div>
 
           {/* Three-column row: side testimonial cards + center video */}
           <motion.div
-            initial="hidden"
-            whileInView="visible"
+            initial={prefersReducedMotion ? false : 'hidden'}
+            whileInView={prefersReducedMotion ? undefined : 'visible'}
             viewport={{ once: true, margin: '-80px' }}
-            variants={staggerContainer}
-            className="mt-14 grid grid-cols-1 lg:grid-cols-[1fr_1.15fr_1fr] gap-6 lg:gap-8 items-stretch max-w-[1150px] mx-auto"
+            variants={testimonialRow}
+            className="mx-auto mt-10 grid max-w-[1150px] grid-cols-1 items-stretch gap-6 sm:mt-12 sm:grid-cols-2 lg:mt-14 lg:grid-cols-[1fr_1.15fr_1fr] lg:gap-8"
           >
             {/* Left: text testimonial */}
-            <motion.div variants={fadeUp} className="relative flex flex-col h-full rounded-2xl bg-white border border-[#E9E7F5] p-6 lg:p-7 shadow-sm">
-              <Quote className="w-9 h-9 text-[#6D3DF5] fill-[#6D3DF5]/20" />
-              <p className="mt-4 text-[13px] text-[#536078] leading-relaxed">{testimonialList[0]?.quote}</p>
-              <div className="mt-6 pt-5 border-t border-[#E9E7F5] flex-1 flex flex-col justify-end">
-                <div className="flex items-center gap-3">
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#F3EEFF] shrink-0">
-                    <Image src={testimonialList[0]?.image} alt={testimonialList[0]?.name} fill className="object-cover" />
+            <motion.div
+              variants={prefersReducedMotion ? undefined : testimonialSlideIn(true)}
+              whileHover={prefersReducedMotion ? undefined : { y: -6, boxShadow: '0 26px 50px -24px rgba(31, 77, 58, 0.30)' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+              className="group relative flex h-full flex-col rounded-2xl border border-[#E8E4DD] bg-white p-5 shadow-sm sm:p-6 lg:p-7"
+            >
+              <AnimatePresence initial={false} mode="wait">
+                <motion.div
+                  key={testimonialIndex}
+                  initial={prefersReducedMotion ? false : { opacity: 0, x: -24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={prefersReducedMotion ? undefined : { opacity: 0, x: 24 }}
+                  transition={{ duration: 0.32, ease: 'easeInOut' }}
+                  className="flex-1 flex flex-col"
+                >
+                  <motion.span
+                    initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.4, y: -6 }}
+                    animate={prefersReducedMotion ? { opacity: 1, scale: 1 } : { opacity: 1, scale: [0.4, 1.12, 1], y: 0 }}
+                    transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 12 }}
+                    aria-hidden="true"
+                    className="self-start"
+                  >
+                    <Quote className={cn('w-9 h-9 text-[#1F4D3A] fill-[#1F4D3A]/20 transition-transform duration-300', prefersReducedMotion ? '' : 'group-hover:-rotate-6 group-hover:scale-110')} />
+                  </motion.span>
+                  <p className="mt-4 text-[15px] text-[#6B7280] leading-relaxed">{testimonialList[testimonialIndex]?.quote}</p>
+                  <div className="mt-6 pt-5 border-t border-[#E8E4DD] flex-1 flex flex-col justify-end">
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#F3EDE2] shrink-0">
+                        <Image src={testimonialList[testimonialIndex]?.image} alt={testimonialList[testimonialIndex]?.name} fill className="object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[16px] font-semibold text-[#1F4D3A] leading-tight truncate">{testimonialList[testimonialIndex]?.name}</p>
+                        <p className="text-[13px] text-[#6B7280] leading-tight truncate mt-0.5">{testimonialList[testimonialIndex]?.role}</p>
+                      </div>
+                    </div>
+                    <TestimonialPagination index={testimonialIndex} onSelect={setTestimonialIndex} prefersReducedMotion={prefersReducedMotion} />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-[#0F1B3D] leading-tight truncate">{testimonialList[0]?.name}</p>
-                    <p className="text-[11px] text-[#536078] leading-tight truncate">{testimonialList[0]?.role}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center gap-1.5 mt-4">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#6D3DF5]" />
-                  <span className="h-px w-10 bg-[#6D3DF5]" />
-                </div>
-              </div>
+                </motion.div>
+              </AnimatePresence>
             </motion.div>
 
             {/* Center: video testimonial */}
-            <motion.div variants={fadeUp} className="relative h-full rounded-[20px] overflow-hidden border border-[#E9E7F5] shadow-sm lg:shadow-lg bg-black">
-              <div className="relative w-full h-full min-h-[320px]">
+            <motion.div
+              variants={prefersReducedMotion ? undefined : testimonialVideoIn}
+              whileHover={prefersReducedMotion ? undefined : { scale: 1.02 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+              className="group relative h-full overflow-hidden rounded-[16px] border border-[#E8E4DD] bg-black shadow-sm sm:order-3 sm:col-span-2 lg:order-none lg:col-span-1 lg:rounded-[20px] lg:shadow-lg"
+            >
+              <div className="relative h-full min-h-[300px] w-full sm:min-h-[360px] lg:min-h-[320px]">
                 {testimonialVideoPlaying ? (
                   <iframe
                     className="absolute inset-0 w-full h-full"
@@ -2525,76 +4071,241 @@ export function LandingPage() {
                   />
                 ) : (
                   <>
-                    <img
+                    {/* Thumbnail with slow Ken Burns motion */}
+                    <motion.img
                       src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Young_woman_takes_selfie_at_home_workspace_with_breakfast_and_laptop_in_the_morning.jpg/960px-Young_woman_takes_selfie_at_home_workspace_with_breakfast_and_laptop_in_the_morning.jpg"
                       alt="Young woman smiling at her home workspace with a laptop"
+                      initial={false}
+                      animate={prefersReducedMotion ? { scale: 1.05 } : { scale: [1.08, 1.18, 1.08] }}
+                      transition={prefersReducedMotion ? { duration: 0 } : { duration: 18, repeat: Infinity, ease: 'easeInOut' }}
                       className="absolute inset-0 w-full h-full object-cover object-top"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/5 to-black/10 pointer-events-none" />
 
-                    {/* Centered play button */}
-                    <button type="button" aria-label="Play testimonial video" onClick={() => setTestimonialVideoPlaying(true)} className="absolute inset-0 m-auto w-16 h-16 rounded-full bg-[#6D3DF5] shadow-sm flex items-center justify-center">
-                      <Play className="w-6 h-6 text-white fill-white ml-0.5" />
-                    </button>
+                    {/* Cinematic scrims */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/30 pointer-events-none" />
+                    <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(224,123,34,0.16),transparent_60%)] pointer-events-none" />
+
+                    {/* Breathing frame glow */}
+                    <motion.span
+                      aria-hidden="true"
+                      animate={prefersReducedMotion ? { opacity: 0.4 } : { opacity: [0.35, 0.75, 0.35] }}
+                      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                      className="pointer-events-none absolute inset-0 rounded-[20px] border border-[#E07B22]/40"
+                    />
+
+                    {/* Soft animated corner glow */}
+                    <motion.span
+                      aria-hidden="true"
+                      animate={prefersReducedMotion ? { opacity: 0.5 } : { scale: [1, 1.25, 1], opacity: [0.5, 0.9, 0.5] }}
+                      transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                      className="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#E07B22]/25 blur-3xl"
+                    />
+
+                    {/* Top badges */}
+                    <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3 sm:p-4">
+                      <span className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/25 backdrop-saturate-150 px-3 py-1.5 text-[10px] font-bold text-white uppercase tracking-wider shadow-lg">
+                        <span aria-hidden="true" className="relative flex h-2 w-2">
+                          <span className={cn('absolute inline-flex h-full w-full rounded-full bg-[#E07B22] opacity-75', prefersReducedMotion ? '' : 'animate-ping')} />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-[#E07B22]" />
+                        </span>
+                        Learner Story
+                      </span>
+                      <motion.span
+                        animate={prefersReducedMotion ? undefined : { y: [0, -4, 0] }}
+                        transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut' }}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/15 px-2.5 py-1.5 text-[10px] font-bold text-white shadow-lg"
+                      >
+                        <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#E07B22]" />
+                        HD
+                      </motion.span>
+                    </div>
+
+                    {/* Floating glass chips above the control bar */}
+                    <div className="pointer-events-none absolute left-4 bottom-[56px]">
+                      <motion.span
+                        animate={prefersReducedMotion ? undefined : { y: [0, -6, 0] }}
+                        transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/15 px-2.5 py-1.5 text-[10px] font-bold text-white shadow-lg"
+                      >
+                        <Clock className="w-3 h-3 text-[#F8B681]" />
+                        05:30
+                      </motion.span>
+                    </div>
+                    <div className="pointer-events-none absolute right-4 bottom-[56px]">
+                      <motion.span
+                        animate={prefersReducedMotion ? undefined : { y: [0, -7, 0] }}
+                        transition={{ duration: 5.2, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-black/45 backdrop-blur-md border border-white/15 px-2.5 py-1.5 text-[10px] font-bold text-white shadow-lg"
+                      >
+                        <Star className="w-3 h-3 fill-[#F8B681] text-[#F8B681]" />
+                        4.8
+                        <span className="font-semibold opacity-80">· 2.5K+</span>
+                      </motion.span>
+                    </div>
+
+                    {/* Occasional shimmer sweep */}
+                    <motion.span
+                      aria-hidden="true"
+                      animate={prefersReducedMotion ? undefined : { x: ['-140%', '240%'] }}
+                      transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+                      className="pointer-events-none absolute inset-y-0 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/12 to-transparent"
+                    />
+
+                    {/* Centered play stack */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {!testimonialVideoPlayed && (
+                        <>
+                          <motion.span
+                            aria-hidden="true"
+                            animate={prefersReducedMotion ? { opacity: 0.35 } : { scale: [1, 1.7, 1] }}
+                            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeOut' }}
+                            className="absolute w-28 h-28 rounded-full bg-[#E07B22]/20 blur-2xl"
+                          />
+                          <motion.span
+                            aria-hidden="true"
+                            animate={prefersReducedMotion ? { opacity: 0.4 } : { scale: [1, 1.9], opacity: [0.5, 0] }}
+                            transition={{ duration: 1.9, repeat: Infinity, ease: 'easeOut' }}
+                            className="absolute w-[76px] h-[76px] rounded-full border-2 border-[#E07B22]/70"
+                          />
+                          <motion.span
+                            aria-hidden="true"
+                            animate={prefersReducedMotion ? { opacity: 0.4 } : { scale: [1, 1.55], opacity: [0.4, 0] }}
+                            transition={{ duration: 1.9, repeat: Infinity, ease: 'easeOut', delay: 0.95 }}
+                            className="absolute w-[76px] h-[76px] rounded-full border border-[#F8B681]/60"
+                          />
+                        </>
+                      )}
+                      <motion.button
+                        type="button"
+                        aria-label="Play testimonial video"
+                        onClick={() => {
+                          setTestimonialVideoPlaying(true)
+                          setTestimonialVideoPlayed(true)
+                        }}
+                        whileHover={prefersReducedMotion ? undefined : { scale: 1.15 }}
+                        whileTap={prefersReducedMotion ? undefined : { scale: 0.95 }}
+                        transition={{ type: 'spring', stiffness: 320, damping: 16 }}
+                        className="relative w-16 h-16 rounded-full bg-[#E07B22] shadow-[0_10px_30px_-6px_rgba(224,123,34,0.6)] flex items-center justify-center"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={cn('absolute inset-0 rounded-full bg-white/25 opacity-0 transition-opacity duration-300', prefersReducedMotion ? '' : 'group-hover:opacity-100')}
+                        />
+                        <Play className="relative w-6 h-6 text-white fill-white ml-0.5" />
+                      </motion.button>
+                    </div>
                   </>
                 )}
 
                 {/* Bottom control bar */}
-                <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-[2px] px-4 py-3">
-                  <div className="flex items-center gap-3">
+                <div className="absolute inset-x-0 bottom-0 bg-black/60 px-3 py-2.5 backdrop-blur-[2px] sm:px-4 sm:py-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <button type="button" aria-label="Pause" className="text-white shrink-0">
                       <Pause className="w-4 h-4 fill-white" />
                     </button>
-                    <div className="relative flex-1 h-1.5 rounded-full bg-white/25">
-                      <div className="absolute inset-y-0 left-0 w-[33%] rounded-full bg-[#6D3DF5]" />
+                    <div className="relative h-1.5 min-w-0 flex-1 rounded-full bg-white/25">
+                      <div className="absolute inset-y-0 left-0 w-[33%] rounded-full bg-[#E07B22] transition-[width] duration-700 ease-out" />
                       <span className="absolute top-1/2 left-[33%] -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-sm" />
                     </div>
-                    <span className="text-[10.5px] text-white tabular-nums whitespace-nowrap shrink-0">02:15 / 05:30</span>
+                    <span className="shrink-0 whitespace-nowrap text-[9.5px] tabular-nums text-white sm:text-[10.5px]">02:15 / 05:30</span>
                     <button type="button" aria-label="Volume" className="text-white shrink-0">
                       <Volume className="w-4 h-4" />
                     </button>
                     <button type="button" aria-label="Fullscreen" className="text-white shrink-0">
                       <Maximize className="w-4 h-4" />
                     </button>
-                    <span className="rounded-[5px] bg-[#6D3DF5] px-1.5 py-0.5 text-[9.5px] font-bold text-white leading-none shrink-0">CC</span>
+                    <button
+                      type="button"
+                      aria-label="Toggle captions"
+                      aria-pressed={testimonialCaptionsOn}
+                      onClick={() => setTestimonialCaptionsOn((v) => !v)}
+                      className="rounded-[5px] bg-[#E07B22] px-1.5 py-0.5 text-[9.5px] font-bold text-white leading-none shrink-0"
+                    >
+                      <motion.span
+                        animate={testimonialCaptionsOn && !prefersReducedMotion ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+                        transition={{ duration: 0.45, ease: 'easeInOut' }}
+                        className="block"
+                      >
+                        CC
+                      </motion.span>
+                    </button>
                   </div>
                 </div>
               </div>
             </motion.div>
 
             {/* Right: text testimonial */}
-            <motion.div variants={fadeUp} className="relative flex flex-col h-full rounded-2xl bg-white border border-[#E9E7F5] p-6 lg:p-7 shadow-sm">
-              <Quote className="w-9 h-9 text-[#3478F6] fill-[#3478F6]/20" />
-              <p className="mt-4 text-[13px] text-[#536078] leading-relaxed">{testimonialList[1]?.quote}</p>
-              <div className="mt-6 pt-5 border-t border-[#E9E7F5] flex-1 flex flex-col justify-end">
-                <div className="flex items-center gap-3">
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#EEF4FF] shrink-0">
-                    <Image src={testimonialList[1]?.image} alt={testimonialList[1]?.name} fill className="object-cover" />
+            <motion.div
+              variants={prefersReducedMotion ? undefined : testimonialSlideIn(false)}
+              whileHover={prefersReducedMotion ? undefined : { y: -6, boxShadow: '0 26px 50px -24px rgba(224, 123, 34, 0.30)' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 22 }}
+              className="group relative flex h-full flex-col rounded-2xl border border-[#E8E4DD] bg-white p-5 shadow-sm sm:order-2 sm:col-start-2 sm:p-6 lg:order-none lg:col-start-auto lg:p-7"
+            >
+              <AnimatePresence initial={false} mode="wait">
+                <motion.div
+                  key={testimonialRightIndex}
+                  initial={prefersReducedMotion ? false : { opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={prefersReducedMotion ? undefined : { opacity: 0, x: -24 }}
+                  transition={{ duration: 0.32, ease: 'easeInOut' }}
+                  className="flex-1 flex flex-col"
+                >
+                  <motion.span
+                    initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.4, y: -6 }}
+                    animate={prefersReducedMotion ? { opacity: 1, scale: 1 } : { opacity: 1, scale: [0.4, 1.12, 1], y: 0 }}
+                    transition={prefersReducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 12 }}
+                    aria-hidden="true"
+                    className="self-start"
+                  >
+                    <Quote className={cn('w-9 h-9 text-[#E07B22] fill-[#E07B22]/20 transition-transform duration-300', prefersReducedMotion ? '' : 'group-hover:rotate-6 group-hover:scale-110')} />
+                  </motion.span>
+                  <p className="mt-4 text-[15px] text-[#6B7280] leading-relaxed">{testimonialList[testimonialRightIndex]?.quote}</p>
+                  <div className="mt-6 pt-5 border-t border-[#E8E4DD] flex-1 flex flex-col justify-end">
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#FDEEDF] shrink-0">
+                        <Image src={testimonialList[testimonialRightIndex]?.image} alt={testimonialList[testimonialRightIndex]?.name} fill className="object-cover" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[16px] font-semibold text-[#1F4D3A] leading-tight truncate">{testimonialList[testimonialRightIndex]?.name}</p>
+                        <p className="text-[13px] text-[#6B7280] leading-tight truncate mt-0.5">{testimonialList[testimonialRightIndex]?.role}</p>
+                      </div>
+                    </div>
+                    <TestimonialPagination index={testimonialRightIndex} onSelect={setTestimonialRightIndex} prefersReducedMotion={prefersReducedMotion} />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-[#0F1B3D] leading-tight truncate">{testimonialList[1]?.name}</p>
-                    <p className="text-[11px] text-[#536078] leading-tight truncate">{testimonialList[1]?.role}</p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center gap-1.5 mt-4">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#3478F6]" />
-                  <span className="h-px w-10 bg-[#3478F6]" />
-                </div>
-              </div>
+                </motion.div>
+              </AnimatePresence>
             </motion.div>
           </motion.div>
         </Container>
       </section>
       {/* CTA + Footer */}
-      <footer className="relative bg-[#0B1020] border-t border-white/5 overflow-hidden z-20">
-        {/* branded top accent */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#6D3DF5] via-[#3478F6] to-[#18A878]" />
-        {/* ambient glows */}
-        <div className="pointer-events-none absolute -top-32 -left-24 w-96 h-96 rounded-full bg-[#6D3DF5]/25 blur-3xl opacity-60" />
-        <div className="pointer-events-none absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-[#3478F6]/20 blur-3xl opacity-50" />
-        <div className="pointer-events-none absolute -bottom-32 left-1/3 w-96 h-96 rounded-full bg-[#18A878]/15 blur-3xl opacity-50" />
+      <footer className="relative bg-gradient-to-b from-[#0F2E24] to-[#143A2C] border-t border-[#234433]/60 overflow-hidden z-20" style={{ fontFamily: "'Mona Sans', sans-serif" }}>
+        {/* branded top accent — animated gradient line */}
+        <motion.div
+          aria-hidden="true"
+          animate={prefersReducedMotion ? undefined : { backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-[linear-gradient(90deg,#E07B22,#F8B681,#2E7D5B,#F8B681,#E07B22)] bg-[length:200%_100%]"
+        />
+        {/* deep green ambient glows */}
+        <div className="pointer-events-none absolute -top-32 -left-24 w-96 h-96 rounded-full bg-[#2E6650]/40 blur-3xl opacity-60" />
+        <div className="pointer-events-none absolute top-1/3 -right-32 w-96 h-96 rounded-full bg-[#1F4D3A]/50 blur-3xl opacity-50" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 w-96 h-96 rounded-full bg-[#E07B22]/10 blur-3xl opacity-50" />
+        {/* floating warm orbs */}
+        <motion.div
+          aria-hidden="true"
+          animate={prefersReducedMotion ? undefined : { y: [0, -18, 0], opacity: [0.45, 0.8, 0.45] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+          className="pointer-events-none absolute top-24 right-[12%] w-24 h-24 rounded-full bg-[#E07B22]/15 blur-2xl"
+        />
+        <motion.div
+          aria-hidden="true"
+          animate={prefersReducedMotion ? undefined : { y: [0, 14, 0], opacity: [0.4, 0.7, 0.4] }}
+          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+          className="pointer-events-none absolute bottom-28 left-[8%] w-28 h-28 rounded-full bg-[#43A67A]/15 blur-2xl"
+        />
         {/* subtle dot grid texture */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:radial-gradient(#FFFFFF_1px,transparent_1px)] [background-size:22px_22px]" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:radial-gradient(#B8C9C0_1px,transparent_1px)] [background-size:22px_22px]" />
 
         <Container size="full" className="relative py-16 lg:py-20">
           {/* Top CTA Banner */}
@@ -2603,12 +4314,12 @@ export function LandingPage() {
             whileInView="visible"
             viewport={{ once: true, margin: '-80px' }}
             variants={fadeUp}
-            className="relative rounded-3xl bg-gradient-to-br from-[#171E36] via-[#12182E] to-[#0E1428] border border-white/10 overflow-hidden shadow-lg shadow-slate-900/10"
+            className="relative rounded-3xl bg-gradient-to-br from-[#16352A] via-[#123027] to-[#0F2A21] border border-white/10 overflow-hidden shadow-lg shadow-black/25"
           >
-            <div className="pointer-events-none absolute -top-24 -left-20 w-72 h-72 rounded-full bg-[#6D3DF5]/30 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-28 -right-16 w-72 h-72 rounded-full bg-[#3478F6]/25 blur-3xl" />
-            <div className="pointer-events-none absolute top-1/3 right-1/3 w-56 h-56 rounded-full bg-[#18A878]/20 blur-3xl" />
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+            <div className="pointer-events-none absolute -top-24 -left-20 w-72 h-72 rounded-full bg-[#E07B22]/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-28 -right-16 w-72 h-72 rounded-full bg-[#43A67A]/20 blur-3xl" />
+            <div className="pointer-events-none absolute top-1/3 right-1/3 w-56 h-56 rounded-full bg-[#1F4D3A]/40 blur-3xl" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
             <div className="relative flex flex-col xl:flex-row gap-10 items-center px-7 py-10 lg:px-12 lg:py-12">
               {/* Left: content */}
@@ -2618,21 +4329,21 @@ export function LandingPage() {
                     <CtaScene />
                   </div>
                   <div className="text-center sm:text-left">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#A78BFA]/10 border border-[#A78BFA]/25 mb-4">
-                      <Sparkles className="w-3 h-3 text-[#A78BFA]" />
-                      <span className="text-[10px] font-bold text-[#C4B5FD] uppercase tracking-wider">Learn. Earn. Grow.</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E07B22]/10 border border-[#E07B22]/30 mb-4">
+                      <Sparkles className="w-3 h-3 text-[#E07B22]" />
+                      <span className="text-[10px] font-bold text-[#F8B681] uppercase tracking-wider">Learn. Earn. Grow.</span>
                     </span>
                     <h2 className="text-[26px] lg:text-[32px] font-extrabold text-white leading-tight">
                       Start Learning. Start Earning.
                     </h2>
                     <h3 className="text-[20px] lg:text-[24px] font-extrabold leading-snug mt-1.5 text-white capitalize">
-                      Start Your <span className="relative inline-block text-[#C4B5FD]">Journey
+                      Start Your <span className="relative inline-block">Journey
                         <svg className="absolute left-0 -bottom-1.5 w-full h-2.5" viewBox="0 0 120 8" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                          <path d="M2 6 C 30 1, 90 1, 118 6" stroke="#A78BFA" strokeWidth="3" strokeLinecap="round" />
+                          <path d="M2 6 C 30 1, 90 1, 118 6" stroke="#E07B22" strokeWidth="3" strokeLinecap="round" />
                         </svg>
                       </span> Today!
                     </h3>
-                    <p className="text-[#9AA4B8] text-[13.5px] leading-relaxed mt-3 max-w-md">
+                    <p className="text-[#B8C9C0] text-[13.5px] leading-relaxed mt-3 max-w-md">
                       Join thousands of learners who are building skills, earning income, and creating a better future.
                     </p>
                   </div>
@@ -2647,7 +4358,7 @@ export function LandingPage() {
                       </div>
                       <div>
                         <p className="text-[13px] font-bold text-white leading-tight">{f.title}</p>
-                        <p className="text-[11px] text-[#8B94A8] leading-snug mt-0.5">{f.desc}</p>
+                        <p className="text-[11px] text-[#8FA79D] leading-snug mt-0.5">{f.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -2657,101 +4368,133 @@ export function LandingPage() {
               {/* Right: CTA */}
               <div className="shrink-0 flex flex-col items-center xl:items-end gap-3 xl:pr-2">
                 <Link href="/signup">
-                  <button data-magnet className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#6D3DF5] to-[#8B5CF6] hover:from-[#7C3AED] hover:to-[#A78BFA] text-white text-[14px] font-bold px-7 py-3.5 shadow-sm transition-all duration-300 hover:-translate-y-0.5">
+                  <button data-magnet className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#E07B22] to-[#F59E0B] hover:from-[#C96A18] hover:to-[#E07B22] text-white text-[14px] font-bold px-7 py-3.5 shadow-sm transition-colors duration-300">
                     Join Now &ndash; It&apos;s Free!
                     <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </button>
                 </Link>
-                <p className="text-[11px] text-[#8B94A8]">No hidden charges. Cancel anytime.</p>
+                <p className="text-[11px] text-[#8FA79D]">No hidden charges. Cancel anytime.</p>
               </div>
             </div>
           </motion.div>
 
           {/* Main footer grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-x-8 gap-y-10 mt-16">
+          <motion.div
+            initial={prefersReducedMotion ? false : 'hidden'}
+            whileInView={prefersReducedMotion ? undefined : 'visible'}
+            viewport={{ once: true, margin: '-60px' }}
+            variants={footerGridStagger}
+            className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-x-8 gap-y-10 mt-16"
+          >
             {/* Brand */}
-            <div className="col-span-2 md:col-span-3 xl:col-span-1">
-              <Link href="/" className="inline-flex items-center mb-4 group" aria-label="Learn2Earn">
-                <span className="inline-flex items-center justify-center rounded-xl bg-white px-3.5 py-2 shadow-sm transition-transform duration-300 group-hover:scale-[1.03]">
+            <motion.div variants={footerColIn} className="col-span-2 md:col-span-3 xl:col-span-1">
+              <Link href="/" className="inline-flex items-center mb-4" aria-label="Learn2Earn">
+                <span className="inline-flex items-center justify-center rounded-2xl bg-white px-3.5 py-2 shadow-[0_14px_30px_-12px_rgba(0,0,0,0.6)]">
                   <Image
-                    src="/learn2earn-logo.png"
+                    src="/footer-logo.jpg"
                     alt="Learn2Earn"
-                    width={500}
-                    height={158}
-                    className="h-8 w-auto object-contain"
+                    width={1088}
+                    height={960}
+                    className="h-14 w-auto object-contain"
                   />
                 </span>
               </Link>
-              <p className="text-[#8B94A8] text-[13px] leading-relaxed">
+              <p className="text-[#B8C9C0] text-[13px] leading-relaxed">
                 The all-in-one platform to learn new skills, earn income, and build the future you deserve.
               </p>
               <div className="flex items-center gap-2 mt-5">
-                {footerSocials.map((s) => (
-                  <button
+                {footerSocials.map((s, si) => (
+                  <motion.button
                     key={s.label}
+                    variants={footerColIn}
+                    custom={si}
+                    whileHover={prefersReducedMotion ? undefined : { scale: 1.18, rotate: 6, y: -3 }}
+                    whileTap={prefersReducedMotion ? undefined : { scale: 0.88 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 14 }}
                     aria-label={s.label}
-                    className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[#8B94A8] hover:text-white hover:bg-[#6D3DF5] hover:border-[#6D3DF5] transition-all duration-200"
+                    className="w-9 h-9 rounded-full bg-transparent border border-[#4A6B5C] flex items-center justify-center text-[#B8C9C0] hover:text-white hover:bg-[#E07B22] hover:border-[#E07B22] transition-colors duration-200"
                   >
                     <s.icon className="w-4 h-4" />
-                  </button>
+                  </motion.button>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
             {/* Quick Links */}
-            <FooterLinksCol title="Quick Links" icon={<Link2 className="w-3.5 h-3.5 text-[#A78BFA]" />} accent="text-[#A78BFA]" links={footerQuickLinks} />
+            <motion.div variants={footerColIn} className="col-span-2 md:col-span-1">
+              <FooterLinksCol title="Quick Links" icon={<Link2 className="w-4 h-4 text-[#E07B22]" />} links={footerQuickLinks} />
+            </motion.div>
             {/* For Learners */}
-            <FooterLinksCol title="For Learners" icon={<GraduationCap className="w-3.5 h-3.5 text-[#34D399]" />} accent="text-[#34D399]" links={footerLearnerLinks} />
+            <motion.div variants={footerColIn} className="col-span-2 md:col-span-1">
+              <FooterLinksCol title="For Learners" icon={<GraduationCap className="w-4 h-4 text-[#E07B22]" />} links={footerLearnerLinks} />
+            </motion.div>
             {/* For Earners */}
-            <FooterLinksCol title="For Earners" icon={<Wallet className="w-3.5 h-3.5 text-[#60A5FA]" />} accent="text-[#60A5FA]" links={footerEarnerLinks} />
+            <motion.div variants={footerColIn} className="col-span-2 md:col-span-1">
+              <FooterLinksCol title="For Earners" icon={<Wallet className="w-4 h-4 text-[#F8B681]" />} links={footerEarnerLinks} />
+            </motion.div>
             {/* Company */}
-            <FooterLinksCol title="Company" icon={<Building className="w-3.5 h-3.5 text-[#A78BFA]" />} accent="text-[#A78BFA]" links={footerCompanyLinks} />
+            <motion.div variants={footerColIn} className="col-span-2 md:col-span-1">
+              <FooterLinksCol title="Company" icon={<Building className="w-4 h-4 text-[#E07B22]" />} links={footerCompanyLinks} />
+            </motion.div>
 
             {/* Stay Updated */}
-            <div className="col-span-2 md:col-span-1">
-              <h4 className="flex items-center gap-2 text-[13px] font-bold text-[#34D399] mb-4">
-                <MailPlus className="w-3.5 h-3.5 text-[#34D399]" />
+            <motion.div variants={footerColIn} className="col-span-2 md:col-span-1">
+              <h4 className="group/title flex items-center gap-2 text-[16px] font-semibold text-white mb-4">
+                <span className="transition-transform duration-300 group-hover/title:scale-110 group-hover/title:rotate-6">
+                  <MailPlus className="w-4 h-4 text-[#E07B22]" />
+                </span>
                 Stay Updated
+                <span aria-hidden="true" className="h-px flex-1 min-w-[12px] bg-gradient-to-r from-white/25 to-transparent" />
               </h4>
-              <p className="text-[12px] text-[#8B94A8] leading-relaxed mb-3">
+              <p className="text-[12px] text-[#B8C9C0] leading-relaxed mb-3">
                 Subscribe to get the latest courses, tips, and updates.
               </p>
               <form
                 onSubmit={(e) => e.preventDefault()}
-                className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 p-1.5 focus-within:border-[#6D3DF5]/60 transition-colors"
+                className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 p-1.5 focus-within:border-[#E07B22]/60 focus-within:shadow-[0_0_0_4px_rgba(224,123,34,0.12)] transition-all duration-300"
               >
                 <input
                   type="email"
                   placeholder="Your email address"
-                  className="flex-1 min-w-0 bg-transparent text-[12px] text-white placeholder:text-[#5B6478] px-2 outline-none"
+                  className="flex-1 min-w-0 bg-transparent text-[12px] text-white placeholder:text-[#5C776C] px-2 outline-none"
                 />
-                <button
+                <motion.button
                   type="submit"
                   aria-label="Subscribe"
-                  className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#6D3DF5] to-[#8B5CF6] flex items-center justify-center text-white shadow-sm hover:from-[#7C3AED] hover:to-[#A78BFA] transition-all duration-200 shrink-0"
+                  whileHover={prefersReducedMotion ? undefined : { scale: 1.15, rotate: -4 }}
+                  whileTap={prefersReducedMotion ? undefined : { scale: 0.9 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 15 }}
+                  className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#E07B22] to-[#F59E0B] hover:from-[#C96A18] hover:to-[#E07B22] flex items-center justify-center text-white shadow-sm transition-colors duration-200 shrink-0"
                 >
                   <Send className="w-4 h-4" />
-                </button>
+                </motion.button>
               </form>
-              <p className="flex items-start gap-1.5 text-[10.5px] text-[#5B6478] leading-snug mt-3">
+              <p className="flex items-start gap-1.5 text-[10.5px] text-[#5C776C] leading-snug mt-3">
                 <Lock className="w-3 h-3 shrink-0 mt-0.5" />
                 We respect your privacy. Unsubscribe anytime.
               </p>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Legal bar */}
-          <div className="mt-14 pt-8 border-t border-white/10">
+          <motion.div
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
+            whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="mt-14 pt-8"
+          >
+            <div className="h-px w-full mb-8 bg-gradient-to-r from-transparent via-[#5C776C] to-transparent" />
             <div className="flex flex-col md:flex-row items-center justify-between gap-3">
-              <p className="text-[12px] text-[#8B94A8]">&copy; 2026 Learn2Earn. All rights reserved.</p>
-              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] text-[#8B94A8]">
+              <p className="text-[13px] text-[#5C776C]">&copy; 2026 <span className="text-[#E07B22] font-semibold">Learn2Earn</span>. All rights reserved.</p>
+              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[13px] text-[#5C776C]">
                 {['Terms of Use', 'Privacy Policy', 'Refund Policy', 'Cookie Policy'].map((item) => (
-                  <button key={item} className="hover:text-white transition-colors">{item}</button>
+                  <button key={item} className="hover:text-[#F8B681] transition-colors">{item}</button>
                 ))}
               </div>
-              <p className="text-[12px] text-[#8B94A8]">Made with 💜 for learners worldwide.</p>
+              <p className="text-[13px] text-[#5C776C]">Made with &#128154; for learners worldwide.</p>
             </div>
-          </div>
+          </motion.div>
         </Container>
       </footer>
 

@@ -527,11 +527,11 @@ export default function EnrollmentModal({ open, onOpenChange, course }: Props) {
       }
 
       onOpenChange(false)
-      toast.success('Registration complete! Redirecting to payment...')
+      toast.success('Registration complete! Redirecting to enrollment...')
       const courseTitle = course.title
       const coursePrice = course.price
       sessionStorage.setItem(`course_${course.id}`, JSON.stringify({ title: courseTitle, price: coursePrice }))
-      router.push(`/payment/${course.id}?title=${encodeURIComponent(courseTitle)}&price=${coursePrice}`)
+      router.push(`/student-information?courseId=${course.id}`)
     } catch {
       setSubmitError('Network error. Please check your connection.')
     } finally {

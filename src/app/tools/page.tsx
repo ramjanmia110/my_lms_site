@@ -8,8 +8,9 @@ import {
   Star, Zap, Clock, BadgeCheck, Database, SlidersHorizontal, X,
   ChevronLeft, ChevronRight, Compass, Sparkles, BookOpen, GraduationCap, Puzzle,
 } from 'lucide-react'
-import { PublicNavbar } from '@/components/public/PublicNavbar'
-import { LandingFooter } from '@/components/public/LandingFooter'
+import { LandingHeader } from '@/components/landing/LandingHeader'
+import { LandingSiteFooter } from '@/components/landing/LandingSiteFooter'
+import { ScrollToTop } from '@/components/ui/scroll-to-top'
 import { toolsAPI } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -482,7 +483,8 @@ function ToolsContent() {
         <div className="absolute -bottom-44 -left-32 w-[560px] h-[560px] rounded-full bg-[#3478F6]/[0.06] blur-3xl" />
       </div>
 
-      <PublicNavbar />
+      <LandingHeader />
+      <div aria-hidden className="h-[100px] lg:h-[124px]" />
 
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="flex gap-6 sm:gap-8">
@@ -632,7 +634,8 @@ function ToolsContent() {
         </div>
       </div>
 
-      <LandingFooter />
+      <LandingSiteFooter />
+      <ScrollToTop />
     </div>
   )
 }

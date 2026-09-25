@@ -3,9 +3,8 @@
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import Image from 'next/image'
 import { ArrowRight, Eye, EyeOff, Github, Lock, Mail } from 'lucide-react'
-import { Learn2EarnLogo } from '@/components/ui/logo'
 import { AuthModeToggle } from '@/components/auth/AuthModeToggle'
 import { AuthSplitLayout } from '@/components/auth/AuthSplitLayout'
 import { authAPI } from '@/lib/api'
@@ -44,7 +43,7 @@ function LoginForm() {
       const pending = getPendingEnrollment()
       if (enrollId) {
         clearPendingEnrollment()
-        router.push(`/payment/${enrollId}`)
+        router.push(`/student-information?courseId=${enrollId}`)
       } else if (pending?.redirect_after_auth) {
         clearPendingEnrollment()
         router.push(pending.redirect_after_auth)
@@ -71,19 +70,25 @@ function LoginForm() {
 
   return (
     <AuthSplitLayout variant="login">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
+      <div className="w-full">
         {/* logo + tagline */}
         <div className="mb-7 text-center">
           <div className="flex justify-center mb-2">
-            <Learn2EarnLogo variant="dark" size="md" />
+            <Image
+              src="https://plain-apac-prod-public.komododecks.com/202609/24/QvqonU8iVHyTE9fh3hih/image.png"
+              alt="Learn2Earn"
+              width={192}
+              height={58}
+              className="h-10 w-auto object-contain drop-shadow-sm sm:h-11"
+            />
           </div>
-          <p className="text-[11px] font-medium tracking-wide text-[#A9B3C8]">Learn Today, Earn Tomorrow</p>
+          <p className="text-[11px] font-medium tracking-wide text-[#8C857C]">Learn Today, Earn Tomorrow</p>
         </div>
 
         {/* heading */}
         <div className="mb-5 text-center">
-          <h1 className="text-[22px] font-bold text-[#0F1B3D]">Sign In</h1>
-          <p className="mt-1 text-[13px] text-[#6B7694]">Welcome back! Please sign in to continue.</p>
+          <h1 className="text-[22px] font-bold text-[#153B2E]">Sign In</h1>
+          <p className="mt-1 text-[13px] text-[#667269]">Welcome back! Please sign in to continue.</p>
         </div>
 
         {/* toggle */}
@@ -93,7 +98,7 @@ function LoginForm() {
         <div className="space-y-3 mb-5">
           <button
             onClick={handleGoogleLogin}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#E5E0F4] bg-white py-2.5 px-4 text-sm font-medium text-[#0F1B3D] transition-all hover:border-[#6D3DF5]/30 hover:bg-[#F8F5FF] hover:shadow-sm"
+            className="auth-social-button flex w-full items-center justify-center gap-3 rounded-xl border border-[#E7E0D7] bg-white py-2.5 px-4 text-sm font-medium text-[#153B2E] transition-all hover:border-[#D8CEC1] hover:bg-[#FFFCF8] hover:shadow-sm"
           >
             <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -105,7 +110,7 @@ function LoginForm() {
           </button>
           <button
             onClick={handleGithubLogin}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#E5E0F4] bg-white py-2.5 px-4 text-sm font-medium text-[#0F1B3D] transition-all hover:border-[#3478F6]/30 hover:bg-[#F0F6FF] hover:shadow-sm"
+            className="auth-social-button flex w-full items-center justify-center gap-3 rounded-xl border border-[#E7E0D7] bg-white py-2.5 px-4 text-sm font-medium text-[#153B2E] transition-all hover:border-[#D8CEC1] hover:bg-[#FAFCF9] hover:shadow-sm"
           >
             <Github className="h-[18px] w-[18px]" />
             Continue with GitHub
@@ -115,10 +120,10 @@ function LoginForm() {
         {/* divider */}
         <div className="relative mb-5">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[#E5E0F4]" />
+            <div className="w-full border-t border-[#E7E0D7]" />
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-white/40 px-4 text-[11px] font-semibold uppercase tracking-widest text-[#A9B3C8] backdrop-blur-sm">
+            <span className="bg-white/40 px-4 text-[11px] font-semibold uppercase tracking-widest text-[#8C857C] backdrop-blur-sm">
               or continue with email
             </span>
           </div>
@@ -130,7 +135,7 @@ function LoginForm() {
           <div>
             <label htmlFor="email" className="mb-1.5 block text-[13px] font-semibold text-[#374151]">Email or Username</label>
             <div className="relative">
-              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A9B3C8]" />
+              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8C857C]" />
               <input
                 id="email"
                 name="email"
@@ -141,7 +146,7 @@ function LoginForm() {
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 onInput={(e) => setForm({ ...form, email: (e.target as HTMLInputElement).value })}
                 required
-                className="w-full rounded-xl border border-[#F1EDF9] bg-white py-3 pl-11 pr-4 text-sm text-[#0F1B3D] placeholder-[#B0B9C9] outline-none transition-all focus:border-[#6D3DF5] focus:bg-white focus:ring-2 focus:ring-[#6D3DF5]/10"
+                className="auth-input w-full rounded-xl border border-[#F1EBE3] bg-white py-3 pl-11 pr-4 text-sm text-[#153B2E] placeholder-[#AAA299] outline-none transition-all focus:border-[#E07B22] focus:bg-white focus:ring-2 focus:ring-[#E07B22]/10"
               />
             </div>
           </div>
@@ -150,7 +155,7 @@ function LoginForm() {
           <div>
             <label htmlFor="password" className="mb-1.5 block text-[13px] font-semibold text-[#374151]">Password</label>
             <div className="relative">
-              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A9B3C8]" />
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8C857C]" />
               <input
                 id="password"
                 name="password"
@@ -161,12 +166,12 @@ function LoginForm() {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 onInput={(e) => setForm({ ...form, password: (e.target as HTMLInputElement).value })}
                 required
-                className="w-full rounded-xl border border-[#F1EDF9] bg-white py-3 pl-11 pr-11 text-sm text-[#0F1B3D] placeholder-[#B0B9C9] outline-none transition-all focus:border-[#6D3DF5] focus:bg-white focus:ring-2 focus:ring-[#6D3DF5]/10"
+                className="auth-input w-full rounded-xl border border-[#F1EBE3] bg-white py-3 pl-11 pr-11 text-sm text-[#153B2E] placeholder-[#AAA299] outline-none transition-all focus:border-[#E07B22] focus:bg-white focus:ring-2 focus:ring-[#E07B22]/10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#A9B3C8] transition-colors hover:text-[#6D3DF5]"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8C857C] transition-colors hover:text-[#E07B22]"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -180,11 +185,11 @@ function LoginForm() {
                 type="checkbox"
                 checked={form.remember}
                 onChange={(e) => setForm({ ...form, remember: e.target.checked })}
-                className="h-4 w-4 rounded border-[#D5D0E8] bg-white accent-[#6D3DF5]"
+                className="h-4 w-4 rounded border-[#D8CEC1] bg-white accent-[#E07B22]"
               />
-              <span className="text-[13px] text-[#6B7694]">Remember me</span>
+              <span className="text-[13px] text-[#667269]">Remember me</span>
             </label>
-            <Link href="/forgot-password" className="text-[13px] font-semibold text-[#6D3DF5] transition-colors hover:text-[#5B2EE0]">
+            <Link href="/forgot-password" className="text-[13px] font-semibold text-[#E07B22] transition-colors hover:text-[#B9560D]">
               Forgot password?
             </Link>
           </div>
@@ -193,7 +198,7 @@ function LoginForm() {
           <button
             type="submit"
             disabled={isLoading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6D3DF5] to-[#3478F6] py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(109,61,245,0.45)] transition-all hover:shadow-[0_12px_32px_-6px_rgba(109,61,245,0.55)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 mt-1"
+                className="auth-primary-button relative mt-1 flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#E07B22] py-3 text-sm font-semibold text-white shadow-[0_8px_24px_-6px_rgba(224,123,34,0.45)] transition-[transform,box-shadow,background-color] duration-300 hover:-translate-y-0.5 hover:bg-[#C96818] hover:shadow-[0_12px_32px_-6px_rgba(224,123,34,0.55)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? (
               <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
@@ -207,23 +212,23 @@ function LoginForm() {
         </form>
 
         {/* bottom link */}
-        <p className="mt-6 text-center text-[13px] text-[#6B7694]">
+        <p className="mt-6 text-center text-[13px] text-[#667269]">
           Don&apos;t have an account?{' '}
           <Link
             href={enrollId ? `/signup?enroll=${enrollId}` : redirectTo !== '/dashboard' ? `/signup?redirect=${encodeURIComponent(redirectTo)}` : '/signup'}
-            className="font-semibold text-[#6D3DF5] transition-colors hover:text-[#5B2EE0]"
+            className="font-semibold text-[#E07B22] transition-colors hover:text-[#B9560D]"
           >
             Create one
           </Link>
         </p>
-      </motion.div>
+      </div>
     </AuthSplitLayout>
   )
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="h-6 w-6 rounded-full border-2 border-[#6D3DF5] border-t-transparent animate-spin" /></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><div className="h-6 w-6 rounded-full border-2 border-[#E07B22] border-t-transparent animate-spin" /></div>}>
       <LoginForm />
     </Suspense>
   )

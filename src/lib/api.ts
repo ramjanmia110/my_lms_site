@@ -542,6 +542,10 @@ export const studentAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
   profile: () => api.get('/student/profile'),
+  updateProfile: (data: FormData) =>
+    api.put('/student/profile', data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
   dashboard: () => api.get('/student/dashboard'),
 }
 
@@ -570,6 +574,15 @@ export const paymentsAPI = {
     api.get('/checkout/preview', { params: { course_id: courseId, ...(couponCode ? { coupon_code: couponCode } : {}) } }),
   createOrder: (courseId: number, couponCode?: string) =>
     api.post('/checkout/orders', { course_id: courseId, ...(couponCode ? { coupon_code: couponCode } : {}) }),
+  prepareEnrollment: (courseId: number, data: FormData, couponCode?: string) => {
+    const fd = new FormData()
+    data.forEach((value, key) => fd.append(key, value))
+    fd.append('course_id', String(courseId))
+    if (couponCode) fd.append('coupon_code', couponCode)
+    return api.post('/enrollment/prepare', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
   listOrders: (params?: any) => api.get('/payments/orders', { params }),
   getOrder: (orderNumber: string) => api.get(`/payments/orders/${orderNumber}`),
   payOrder: (orderId: number, paymentMethod: string) =>

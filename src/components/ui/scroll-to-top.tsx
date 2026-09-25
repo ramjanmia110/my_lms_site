@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ChevronUp } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ScrollToTopProps {
@@ -10,16 +10,21 @@ interface ScrollToTopProps {
   threshold?: number
 }
 
-export function ScrollToTop({ className, threshold = 400 }: ScrollToTopProps) {
+const SIZE = 48
+const STROKE = 3
+const RADIUS = (SIZE - STROKE) / 2
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+
+export function ScrollToTop({ className, threshold = 200 }: ScrollToTopProps) {
   const [visible, setVisible] = useState(false)
+  const [progress, setProgress] = useState(0)
   const reduceMotion = useReducedMotion()
 
   useEffect(() => {
     const handleScroll = () => {
-      const atFooter =
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 450
-      setVisible(window.scrollY > threshold && !atFooter)
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      setProgress(max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0)
+      setVisible(window.scrollY > threshold)
     }
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -34,11 +39,12 @@ export function ScrollToTop({ className, threshold = 400 }: ScrollToTopProps) {
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
   }
 
+  const dash = progress * CIRCUMFERENCE
+
   return (
     <div
       className={cn(
-        'fixed bottom-6 inset-x-0 md:inset-x-auto md:right-8 z-[100]',
-        'flex justify-center md:justify-end pointer-events-none',
+        'fixed bottom-6 right-6 z-[100] pointer-events-none',
         className
       )}
     >
@@ -48,16 +54,41 @@ export function ScrollToTop({ className, threshold = 400 }: ScrollToTopProps) {
             key="scroll-to-top"
             type="button"
             aria-label="Scroll to top"
-            initial={{ opacity: 0, y: 24, scale: 0.85 }}
+            initial={{ opacity: 0, y: 20, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.85 }}
+            exit={{ opacity: 0, y: 20, scale: 0.8 }}
             transition={{ duration: 0.25, ease: 'easeOut' }}
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ y: -3 }}
+            whileTap={{ scale: 0.94 }}
             onClick={scrollToTop}
-            className="pointer-events-auto flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-full border border-[#6D3DF5] bg-gradient-to-br from-[#6D3DF5] to-[#8B5CF6] text-white shadow-md shadow-[#6D3DF5]/30 transition-all duration-300 hover:from-[#7C3AED] hover:to-[#A78BFA] hover:shadow-lg hover:shadow-[#6D3DF5]/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#A78BFA]/60 focus-visible:ring-offset-2"
+            className="group pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-full bg-white border border-[#1A453B]/10 shadow-md shadow-[#1A453B]/10 transition-shadow hover:shadow-lg hover:shadow-[#E07B22]/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#E07B22]/50 focus-visible:ring-offset-2"
           >
-            <ChevronUp className="h-[22px] w-[22px] md:h-6 md:w-6" strokeWidth={2.2} />
+            <svg
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full -rotate-90"
+              viewBox={`0 0 ${SIZE} ${SIZE}`}
+              fill="none"
+            >
+              <circle
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                stroke="#F8E1CC"
+                strokeWidth={STROKE}
+              />
+              <circle
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                stroke="#E07B22"
+                strokeWidth={STROKE}
+                strokeLinecap="round"
+                strokeDasharray={CIRCUMFERENCE}
+                strokeDashoffset={CIRCUMFERENCE - dash}
+                className="transition-[stroke-dashoffset] duration-100 ease-linear"
+              />
+            </svg>
+            <ArrowUp className="h-[22px] w-[22px] text-[#E07B22] transition-transform duration-300 group-hover:-translate-y-0.5" strokeWidth={2.6} />
           </motion.button>
         )}
       </AnimatePresence>

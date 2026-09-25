@@ -471,7 +471,7 @@ function CoursesView({ catalogue, onRefresh }: { catalogue: CatalogueCourse[]; o
       const saved = storedLinks[c.id]
       setMeetingDialog({ open: true, course: c, link: saved || c.meeting_url || '' })
     } else {
-      router.push(`/payment/${c.id}?title=${encodeURIComponent(c.title)}&price=${c.price}`)
+      router.push(`/student-information?courseId=${c.id}`)
     }
   }
 

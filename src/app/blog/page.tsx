@@ -8,8 +8,9 @@ import {
   Mail, Send, Tag, FolderOpen, ChevronLeft, ChevronRight,
   TrendingUp, Newspaper, X, Clock, MessageCircle, Bookmark,
 } from 'lucide-react'
-import { PublicNavbar } from '@/components/public/PublicNavbar'
-import { LandingFooter } from '@/components/public/LandingFooter'
+import { LandingHeader } from '@/components/landing/LandingHeader'
+import { LandingSiteFooter } from '@/components/landing/LandingSiteFooter'
+import { ScrollToTop } from '@/components/ui/scroll-to-top'
 import { AuthorAvatar } from '@/components/blog/AuthorAvatar'
 import { blogAPI } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -112,7 +113,8 @@ function BlogContent() {
 
   return (
     <div className="min-h-screen bg-[#FAFBFD] font-sans">
-      <PublicNavbar />
+      <LandingHeader />
+      <div aria-hidden className="h-[100px] lg:h-[124px]" />
 
       {/* Header */}
       <section className="relative overflow-hidden bg-white border-b border-[#E9E7F5]">
@@ -459,7 +461,8 @@ function BlogContent() {
         </div>
       </div>
 
-      <LandingFooter />
+      <LandingSiteFooter />
+      <ScrollToTop />
     </div>
   )
 }

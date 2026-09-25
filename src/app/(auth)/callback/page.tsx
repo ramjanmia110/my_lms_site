@@ -31,7 +31,7 @@ function OAuthCallbackContent() {
         localStorage.setItem('user', JSON.stringify(res.data.user))
         setStatus('Success! Redirecting...')
         if (enrollId) {
-          router.push(`/payment/${enrollId}`)
+          router.push(`/student-information?courseId=${enrollId}`)
         } else {
           router.push('/dashboard')
         }
