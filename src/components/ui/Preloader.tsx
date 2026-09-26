@@ -16,6 +16,14 @@ const PRELOADER_CSS = `
     opacity: 0;
     animation: l2e-fade-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+  /* Leaving state. The entrance animation must be cancelled, otherwise its
+     fill-mode keeps overriding opacity and the element never fades out. */
+  #l2e-preloader.is-leaving {
+    animation: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
   @keyframes l2e-fade-in {
     from { opacity: 0; transform: scale(0.98); }
     to { opacity: 1; transform: scale(1); }
@@ -106,62 +114,103 @@ const PRELOADER_CSS = `
   }
 `
 
+type Phase = 'entering' | 'leaving' | 'gone'
+
 export default function Preloader() {
-  const [hidden, setHidden] = useState(false)
+  const [phase, setPhase] = useState<Phase>('entering')
 
   useEffect(() => {
-    const el = document.getElementById('l2e-preloader')
-    if (!el) return
+    let cancelled = false
+    let scrollLocked = false
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    const later = (fn: () => void, ms: number) => {
+      timers.push(
+        setTimeout(() => {
+          if (!cancelled) fn()
+        }, ms),
+      )
+    }
+
+    const unlockScroll = () => {
+      if (scrollLocked) {
+        document.body.style.overflow = ''
+        scrollLocked = false
+      }
+    }
+
+    // Unmounting is React's job. Never detach this node by hand: React still
+    // owns it, and removing it imperatively makes the later commit-phase
+    // deletion throw "Failed to execute 'removeChild' on 'Node'".
+    const dismiss = () => {
+      if (cancelled) return
+      setPhase('leaving')
+      later(() => {
+        unlockScroll()
+        setPhase('gone')
+      }, 400)
+    }
+
+    let alreadyShown = false
+    try {
+      alreadyShown = sessionStorage.getItem('l2e-shown') === '1'
+    } catch {
+      // Storage blocked (private mode / strict cookie policy): treat as a
+      // first visit rather than crashing.
+    }
 
     // Show only once per session
-    if (sessionStorage.getItem('l2e-shown')) {
-      el.remove()
-      return
+    if (alreadyShown) {
+      later(dismiss, 0)
+      return () => {
+        cancelled = true
+        timers.forEach(clearTimeout)
+      }
     }
-    sessionStorage.setItem('l2e-shown', '1')
+
+    try {
+      sessionStorage.setItem('l2e-shown', '1')
+    } catch {
+      /* ignore */
+    }
 
     const started = Date.now()
-    let finished = false
 
     document.body.style.overflow = 'hidden'
+    scrollLocked = true
 
     const reveal = () => {
-      if (finished) return
-      finished = true
-      const elapsed = Date.now() - started
-      const wait = Math.max(0, 1000 - elapsed)
-      setTimeout(() => {
-        el.style.transition = 'opacity 0.4s ease'
-        el.style.opacity = '0'
-        setTimeout(() => {
-          el.remove()
-          document.body.style.overflow = ''
-          setHidden(true)
-        }, 400)
-      }, wait)
+      later(dismiss, Math.max(0, 1000 - (Date.now() - started)))
     }
 
     // Hide on window load (with 1s minimum)
-    window.addEventListener('load', reveal, { once: true })
+    if (document.readyState === 'complete') {
+      reveal()
+    } else {
+      window.addEventListener('load', reveal, { once: true })
+    }
 
     // Fallback in case load already fired or is delayed
-    const t = setTimeout(reveal, 5000)
+    later(reveal, 5000)
 
     return () => {
+      cancelled = true
+      timers.forEach(clearTimeout)
       window.removeEventListener('load', reveal)
-      clearTimeout(t)
-      if (document.body.style.overflow === 'hidden') {
-        document.body.style.overflow = ''
-      }
+      unlockScroll()
     }
   }, [])
 
-  if (hidden) return null
+  if (phase === 'gone') return null
 
   return (
     <>
       <style>{PRELOADER_CSS}</style>
-      <div id="l2e-preloader" aria-hidden="true">
+      <div
+        id="l2e-preloader"
+        aria-hidden="true"
+        className={phase === 'leaving' ? 'is-leaving' : undefined}
+      >
         <div className="l2e-ring">
           <div className="l2e-ring-track" />
           <div className="l2e-ring-arc" />

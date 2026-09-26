@@ -23,7 +23,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL('http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: 'Learn2Earn - Learn Skills. Build Career. Earn Online.',
   description:
     'Master AI, development, design and freelancing skills with expert instructors. Start your learning journey with Learn2Earn.',

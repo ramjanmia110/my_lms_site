@@ -1,7 +1,10 @@
 import axios from 'axios'
 
+// NOTE: no localhost fallback here. next.config.js fails the production build
+// when NEXT_PUBLIC_API_URL is missing, so a deployed bundle can never fall back
+// to http://localhost:8000 and fail every request with a CORS error.
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '',
   timeout: 30000,
   headers: {
     'Accept': 'application/json',
