@@ -1,10 +1,20 @@
 import axios from 'axios'
 
-// NOTE: no localhost fallback here. next.config.js fails the production build
-// when NEXT_PUBLIC_API_URL is missing, so a deployed bundle can never fall back
-// to http://localhost:8000 and fail every request with a CORS error.
+// NOTE: no localhost fallback here. next.config.js resolves the dev default and
+// leaves production empty, so a deployed bundle can never point at
+// http://localhost:8000 and fail every request with a CORS error.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
+
+if (typeof window !== 'undefined' && !API_URL) {
+  console.error(
+    '[api] NEXT_PUBLIC_API_URL is empty, so API requests go to the current origin ' +
+      'and will 404. Set it in Vercel (Project Settings -> Environment Variables) ' +
+      'to your public API URL including the /api prefix. See .env.example.',
+  )
+}
+
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || '',
+  baseURL: API_URL,
   timeout: 30000,
   headers: {
     'Accept': 'application/json',
