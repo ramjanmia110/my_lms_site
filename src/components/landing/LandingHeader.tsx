@@ -6,7 +6,6 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowRight, ChevronDown, Menu, X } from 'lucide-react'
-import { Container } from '@/components/ui/container'
 import { cn } from '@/lib/utils'
 
 const navLinks = [
@@ -70,13 +69,13 @@ export function LandingHeader() {
         initial={{ y: -120, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 120, damping: 18, delay: 0.05 }}
-        className="fixed inset-x-0 top-0 z-50"
+        className="fixed left-0 top-0 z-50 w-screen max-w-none"
       >
-        <Container size="xl" className="pb-2.5 pt-3">
+        <div className="w-full">
           <div className={cn('nav-aurora', scrolled && 'is-scrolled')}>
-            <div className="nav-shell px-4 sm:px-6">
+            <div className="nav-shell">
               <span className="nav-shine" aria-hidden="true" />
-              <div className="relative flex h-[68px] items-center justify-between sm:h-[76px]">
+              <div className="relative mx-auto flex h-[68px] w-full max-w-[1280px] items-center justify-between px-5 sm:h-[76px] lg:px-8">
                 <Link href="/" className="group flex w-[55%] items-center sm:w-[45%] xl:w-auto" aria-label="Learn2Earn">
                   <motion.div
                     className="relative w-full sm:w-auto"
@@ -207,13 +206,14 @@ export function LandingHeader() {
                   className="rounded-xl p-2 text-[#0F1B3D] transition-colors hover:bg-[#F3EEFF] xl:hidden"
                   aria-label="Toggle navigation menu"
                   aria-expanded={mobileOpen}
-                >
-                  {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Container>
+                 >
+                   {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                 </button>
+               </div>
+             </div>
+           </div>
+         </div>
+
 
         <AnimatePresence>
           {mobileOpen && (
@@ -321,7 +321,7 @@ export function LandingHeader() {
       <style jsx global>{`
         .nav-aurora {
           position: relative;
-          border-radius: 26px;
+          border-radius: 0;
           padding: 1.5px;
           background: linear-gradient(115deg, #F47B20, #FFC08A, #6D3DF5, #34D399, #3478F6, #F47B20);
           background-size: 300% 300%;
@@ -330,7 +330,7 @@ export function LandingHeader() {
           transition: box-shadow 0.4s ease, border-radius 0.4s ease;
         }
         .nav-aurora.is-scrolled {
-          border-radius: 22px;
+          border-radius: 0;
           box-shadow: 0 8px 20px -18px rgba(31, 45, 61, 0.32), 0 2px 8px -6px rgba(244, 123, 32, 0.18);
         }
         @keyframes nav-aurora {
@@ -340,7 +340,7 @@ export function LandingHeader() {
         }
         .nav-shell {
           position: relative;
-          border-radius: 24.5px;
+          border-radius: 0;
           background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 253, 249, 0.88));
           backdrop-filter: blur(18px) saturate(170%);
           -webkit-backdrop-filter: blur(18px) saturate(170%);

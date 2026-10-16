@@ -1866,12 +1866,12 @@ export function LandingPage() {
         transition={{ type: 'spring', stiffness: 120, damping: 18, delay: 0.05 }}
         className="fixed top-0 left-0 right-0 z-50"
       >
-        <Container size="xl" className="pt-3 pb-2.5">
+        <div className="w-full">
           {/* Aurora Glass Bar */}
           <div className={cn('nav-aurora', scrolled && 'is-scrolled')}>
-            <div className="nav-shell px-4 sm:px-6">
+            <div className="nav-shell">
               <span className="nav-shine" aria-hidden="true" />
-              <div className="relative flex items-center justify-between h-[68px] sm:h-[76px]">
+              <div className="relative mx-auto flex w-full max-w-[1280px] items-center justify-between h-[68px] sm:h-[76px] px-5 lg:px-8">
                 {/* Logo */}
                 <Link href="/" className="flex items-center group w-[55%] sm:w-[45%] xl:w-auto" aria-label="Learn2Earn">
                   <motion.div
@@ -2022,7 +2022,7 @@ export function LandingPage() {
               </div>
             </div>
           </div>
-        </Container>
+        </div>
 
 
         {/* Mobile Menu */}
@@ -2226,7 +2226,7 @@ export function LandingPage() {
                     className="hero-cutout-float"
                   >
                     <img
-                      src="https://plain-apac-prod-public.komododecks.com/202609/24/TtKd0T8idvT1yNJAJBpd/image.jpg"
+                      src="https://plain-apac-prod-public.komododecks.com/202610/16/gOuMoBQXUy8bfuq9FG1F/image.jpg"
                       alt="Student learning, building projects and earning illustration"
                       className="hero-cutout"
                       loading="eager"
@@ -2285,10 +2285,19 @@ export function LandingPage() {
 
 
       <style dangerouslySetInnerHTML={{__html: `
+        /* Hide document scrollbar so the full-width header reaches the right edge (no scrollbar gap) */
+        html, body {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        html::-webkit-scrollbar, body::-webkit-scrollbar {
+          width: 0;
+          height: 0;
+        }
         /* ---- Navbar - aurora glass design ---- */
         .nav-aurora {
           position: relative;
-          border-radius: 26px;
+          border-radius: 0;
           padding: 1.5px;
           background: linear-gradient(115deg, #F47B20, #FFC08A, #6D3DF5, #34D399, #3478F6, #F47B20);
           background-size: 300% 300%;
@@ -2297,7 +2306,7 @@ export function LandingPage() {
           transition: box-shadow 0.4s ease, border-radius 0.4s ease;
         }
         .nav-aurora.is-scrolled {
-          border-radius: 22px;
+          border-radius: 0;
           box-shadow: 0 8px 20px -18px rgba(31, 45, 61, 0.32), 0 2px 8px -6px rgba(244, 123, 32, 0.18);
         }
         @keyframes nav-aurora {
@@ -2307,7 +2316,7 @@ export function LandingPage() {
         }
         .nav-shell {
           position: relative;
-          border-radius: 24.5px;
+          border-radius: 0;
           background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 253, 249, 0.88));
           backdrop-filter: blur(18px) saturate(170%);
           -webkit-backdrop-filter: blur(18px) saturate(170%);
@@ -2386,6 +2395,11 @@ export function LandingPage() {
         @media (prefers-reduced-motion: reduce) {
           .nav-aurora, .nav-shine::after, .nav-cta::after { animation: none !important; }
         }
+        /* ---- Course card image hover — cursor spotlight ---- */
+        .course-spotlight {
+          background:
+            radial-gradient(190px circle at var(--mx, 50%) var(--my, 50%), rgba(224, 123, 34, 0.5), rgba(224, 123, 34, 0.14) 45%, transparent 72%);
+        }
         /* ---- Hero - warm organic design ---- */
         .hero {
           background: var(--bg);
@@ -2407,7 +2421,10 @@ export function LandingPage() {
           align-items: center;
         }
         @media (min-width: 1024px) {
-          .hero-grid { grid-template-columns: 55% 45%; gap: 16px; }
+          .hero-grid { grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); gap: 16px; }
+        }
+        @media (min-width: 1920px) {
+          .hero-grid { gap: 72px; }
         }
 
         /* decorative background */
@@ -2670,7 +2687,7 @@ export function LandingPage() {
           <div className="absolute -bottom-20 left-1/2 w-[280px] h-[240px] rounded-full bg-[#1F4D3A]/10 blur-3xl sm:-bottom-28 sm:w-[460px] sm:h-[380px]" />
         </div>
 
-        <Container size="xl" className="relative px-4 sm:px-5 lg:px-8">
+        <Container size="xl" className="relative">
           {/* Section header */}
           <motion.div
             initial="hidden"
@@ -2788,7 +2805,7 @@ export function LandingPage() {
           </div>
 
           {/* Marketplace layout: sticky sidebar + course grid */}
-          <div className="grid grid-cols-1 items-start gap-4 sm:gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-8">
+          <div className="grid grid-cols-1 items-start gap-4 sm:gap-6 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-8 3xl:gap-12">
             {/* Desktop sidebar */}
             <div className="hidden lg:block lg:sticky lg:top-28">
               {renderFilters(false)}
@@ -2868,7 +2885,15 @@ export function LandingPage() {
                   'group-hover/card:-translate-y-1.5 group-hover/card:shadow-[0_22px_44px_-16px_rgba(31,77,58,0.32)] group-hover/card:ring-[#E07B22]/40'
                 )}>
                   {/* Thumbnail */}
-                  <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+                  <div
+                    className="relative aspect-[16/10] overflow-hidden bg-slate-100"
+                    onMouseMove={(e) => {
+                      const el = e.currentTarget
+                      const r = el.getBoundingClientRect()
+                      el.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`)
+                      el.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`)
+                    }}
+                  >
                     <div className={cn('absolute inset-0 bg-gradient-to-br', theme.grad)} />
                     {/* Gentle idle Ken Burns drift so the whole grid feels alive */}
                     <motion.div
@@ -2882,16 +2907,27 @@ export function LandingPage() {
                         alt={course.title}
                         fill
                         sizes="(max-width: 639px) 100vw, (max-width: 1279px) 50vw, 33vw"
-                        className="relative object-cover transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:scale-[1.14] group-hover/card:rotate-[0.4deg]"
+                        className="relative object-cover grayscale-[45%] transition-[transform,filter] duration-700 ease-out group-hover/card:scale-[1.16] group-hover/card:grayscale-0"
                       />
                     </motion.div>
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1F4D3A]/10 via-transparent to-transparent" />
 
-                    {/* Animated hover overlay */}
-                    <div className="pointer-events-none absolute inset-0 z-[5] bg-gradient-to-t from-[#1F4D3A]/80 via-[#1F4D3A]/20 to-transparent opacity-0 translate-y-2 transition-all duration-300 ease-out group-hover/card:opacity-100 group-hover/card:translate-y-0" />
+                    {/* Cursor-follow spotlight — unique hover */}
+                    <div className="course-spotlight pointer-events-none absolute inset-0 z-[5] opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />
 
-                    {/* Diagonal glass sheen sweeping across on hover */}
-                    <div className="pointer-events-none absolute inset-y-0 left-0 z-[6] w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent blur-[2px] -translate-x-[130%] transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:translate-x-[330%]" />
+                    {/* Soft dark wash so the reveal pill reads clearly */}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[6] h-2/3 bg-gradient-to-t from-[#0F2A21]/70 via-[#0F2A21]/15 to-transparent opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />
+
+                    {/* Slide-up "View course" reveal */}
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[7] translate-y-full opacity-0 transition-all duration-500 ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:translate-y-0 group-hover/card:opacity-100">
+                      <div className="m-3 flex items-center justify-between gap-2 rounded-lg bg-white/15 px-3 py-2 ring-1 ring-white/30 backdrop-blur-md">
+                        <span className="text-[11.5px] font-semibold text-white">View course</span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-white/90">
+                          {course.lessons} lessons
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </span>
+                      </div>
+                    </div>
 
                     <div className="absolute top-3 left-3 z-10">
                       <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white shadow-sm" style={{ background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(6px)' }}>
@@ -2916,7 +2952,7 @@ export function LandingPage() {
                       <span className="min-w-0 truncate text-[11px] font-medium text-[#5A6B63] sm:text-[11.5px]">By {course.instructor}</span>
                     </div>
 
-                    <h3 className="mb-3 line-clamp-2 break-words text-[15px] font-semibold leading-snug text-[#1F4D3A] transition-colors duration-300 group-hover/card:text-[#E07B22] sm:text-[16px] lg:text-[16.5px]">
+                    <h3 className="mb-3 line-clamp-2 break-words text-[15px] font-semibold leading-snug text-[#1F4D3A] sm:text-[16px] lg:text-[16.5px]">
                       {course.title}
                     </h3>
 
@@ -3006,16 +3042,25 @@ export function LandingPage() {
                   >
                     <div className={cn('flex flex-col overflow-hidden rounded-2xl border bg-white transition-all duration-300 hover:-translate-y-1 ring-1 ring-black/[0.02] md:flex-row', 'border-[#E8E4DD] shadow-[0_6px_24px_-12px_rgba(31,77,58,0.18)] hover:shadow-[0_18px_40px_-16px_rgba(31,77,58,0.3)]', categoryMeta.borderHover, 'hover:ring-[#E07B22]/30')}>
                       {/* Thumb */}
-                      <div className="relative aspect-video shrink-0 overflow-hidden bg-slate-100 md:w-60 md:aspect-auto lg:w-64">
+                      <div
+                        className="relative aspect-video shrink-0 overflow-hidden bg-slate-100 md:w-60 md:aspect-auto lg:w-64"
+                        onMouseMove={(e) => {
+                          const el = e.currentTarget
+                          const r = el.getBoundingClientRect()
+                          el.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`)
+                          el.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`)
+                        }}
+                      >
                         <motion.div
                           className="absolute inset-0 will-change-transform"
                           initial={false}
                           animate={prefersReducedMotion ? { scale: 1.03 } : { scale: [1.03, 1.1, 1.03] }}
                           transition={prefersReducedMotion ? { duration: 0 } : { duration: 16, repeat: Infinity, ease: 'easeInOut' }}
                         >
-                          <Image src={course.image} alt={course.title} fill className="object-cover transition-transform duration-[1000ms] ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:scale-[1.12] group-hover/card:rotate-[0.4deg]" />
+                          <Image src={course.image} alt={course.title} fill className="object-cover grayscale-[45%] transition-[transform,filter] duration-700 ease-out group-hover/card:scale-[1.14] group-hover/card:grayscale-0" />
                         </motion.div>
-                        <div className="pointer-events-none absolute inset-0 z-[5] w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/25 to-transparent blur-[2px] -translate-x-[130%] transition-transform duration-[1000ms] ease-[cubic-bezier(0.16,0.84,0.44,1)] group-hover/card:translate-x-[330%]" />
+                        {/* Cursor-follow spotlight — unique hover */}
+                        <div className="course-spotlight pointer-events-none absolute inset-0 z-[5] opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />
                         <div className={cn('absolute top-3 left-3 z-10 inline-flex items-center gap-1 px-2 py-0.5 rounded-full shadow-sm text-white', trendBadge.cls)}>
                           <trendBadge.icon className="w-2.5 h-2.5" />
                           <span className="text-[8px] font-bold uppercase tracking-wider">{badgeType}</span>
@@ -3041,7 +3086,7 @@ export function LandingPage() {
                           </span>
                         </div>
 
-                        <h3 className="line-clamp-2 break-words text-[15px] font-extrabold text-[#1F4D3A] transition-colors group-hover/card:text-[#E07B22] sm:line-clamp-1">{course.title}</h3>
+                        <h3 className="line-clamp-2 break-words text-[15px] font-extrabold text-[#1F4D3A] sm:line-clamp-1">{course.title}</h3>
                         <p className="line-clamp-2 text-[12px] text-[#536078] sm:line-clamp-1">{skills.join(' · ')}{course.feature ? ` · ${course.feature}` : ''}</p>
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] font-semibold text-[#536078]">
@@ -3181,8 +3226,8 @@ export function LandingPage() {
           <div className="sl-blob-b h-full w-full bg-[#DFF3E6]/90" />
         </div>
 
-        <Container size="xl" className="relative px-4 sm:px-5 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-16 items-center">
+        <Container size="xl" className="relative">
+          <div className="grid grid-cols-1 gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-16 3xl:gap-24 items-center">
             {/* Left: copy + illustration */}
             <div className="relative">
               {/* Heading — words rise and unblur one by one */}
@@ -3451,7 +3496,7 @@ export function LandingPage() {
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-24 w-[380px] h-[380px] rounded-full bg-white blur-3xl opacity-70" />
 
         <Container size="xl" className="relative">
-          <div className="grid grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.55fr)] lg:gap-14">
+          <div className="grid grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.55fr)] lg:gap-14 3xl:gap-24">
             {/* Left column — copy */}
             <motion.div
               initial="hidden"
@@ -3643,7 +3688,7 @@ export function LandingPage() {
           </div>
 
           {/* Pricing cards */}
-          <div className="mx-auto mt-2 grid max-w-lg grid-cols-1 items-stretch gap-5 sm:max-w-2xl sm:gap-7 md:grid-cols-2 lg:max-w-[1160px] lg:grid-cols-3 lg:gap-8">
+          <div className="mx-auto mt-2 grid max-w-lg grid-cols-1 items-stretch gap-5 sm:max-w-2xl sm:gap-7 md:grid-cols-2 lg:max-w-[1160px] lg:grid-cols-3 lg:gap-8 3xl:gap-12">
             {pricingPlans.map((plan, idx) => {
               const isPro = plan.key === 'pro'
               const amount = billing === 'annual' ? plan.priceAnnual : plan.priceMonthly
@@ -3852,7 +3897,7 @@ export function LandingPage() {
           </motion.div>
 
           {/* Two-column layout: image left, content right */}
-          <div className="grid grid-cols-1 items-stretch gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12">
+          <div className="grid grid-cols-1 items-stretch gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12 3xl:gap-24">
             {/* Left: full-height photo with floating overlays */}
             <EarnImagePanel prefersReducedMotion={prefersReducedMotion} />
 
@@ -4009,7 +4054,7 @@ export function LandingPage() {
             whileInView={prefersReducedMotion ? undefined : 'visible'}
             viewport={{ once: true, margin: '-80px' }}
             variants={testimonialRow}
-            className="mx-auto mt-10 grid max-w-[1150px] grid-cols-1 items-stretch gap-6 sm:mt-12 sm:grid-cols-2 lg:mt-14 lg:grid-cols-[1fr_1.15fr_1fr] lg:gap-8"
+            className="mx-auto mt-10 grid max-w-[1150px] grid-cols-1 items-stretch gap-6 sm:mt-12 sm:grid-cols-2 lg:mt-14 lg:grid-cols-[1fr_1.15fr_1fr] lg:gap-8 3xl:gap-16"
           >
             {/* Left: text testimonial */}
             <motion.div
@@ -4307,7 +4352,7 @@ export function LandingPage() {
         {/* subtle dot grid texture */}
         <div className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:radial-gradient(#B8C9C0_1px,transparent_1px)] [background-size:22px_22px]" />
 
-        <Container size="full" className="relative py-16 lg:py-20">
+        <Container size="xl" className="relative py-16 lg:py-20">
           {/* Top CTA Banner */}
           <motion.div
             initial="hidden"
@@ -4321,7 +4366,7 @@ export function LandingPage() {
             <div className="pointer-events-none absolute top-1/3 right-1/3 w-56 h-56 rounded-full bg-[#1F4D3A]/40 blur-3xl" />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-            <div className="relative flex flex-col xl:flex-row gap-10 items-center px-7 py-10 lg:px-12 lg:py-12">
+            <div className="relative flex flex-col xl:flex-row gap-10 3xl:gap-20 items-center px-7 py-10 lg:px-12 lg:py-12">
               {/* Left: content */}
               <div className="flex-1">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">

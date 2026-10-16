@@ -10,7 +10,7 @@ const sizeClasses = {
   sm: "max-w-4xl",
   md: "max-w-5xl",
   lg: "max-w-6xl",
-  xl: "max-w-7xl",
+  xl: "max-w-[1280px]",
   full: "max-w-[1600px]",
 } as const
 
