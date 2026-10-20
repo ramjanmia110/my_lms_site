@@ -37,12 +37,13 @@ export function PublicNavbar() {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    'px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                    'relative px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-200',
                     active
-                      ? 'text-[#6D3DF5] bg-[#F3EEFF]'
-                      : 'text-[#536078] hover:text-[#6D3DF5] hover:bg-[#F3EEFF]'
+                      ? 'text-[#6D3DF5]'
+                      : 'text-[#536078] hover:text-[#6D3DF5]'
                   )}
                 >
+                  {active && <span className="absolute left-3 right-3 bottom-1 h-0.5 rounded-full bg-gradient-to-r from-[#6D3DF5] to-[#3478F6]" />}
                   {link.label}
                 </Link>
               )

@@ -72,9 +72,8 @@ export function LandingHeader() {
         className="fixed left-0 top-0 z-50 w-screen max-w-none"
       >
         <div className="w-full">
-          <div className={cn('nav-aurora', scrolled && 'is-scrolled')}>
-            <div className="nav-shell">
-              <span className="nav-shine" aria-hidden="true" />
+          <div className={cn('bg-white/90 backdrop-blur-md', scrolled ? 'border-b border-[#E9E7F5]' : '')}>
+            <div className="nav-shell-simple">
               <div className="relative mx-auto flex h-[68px] w-full max-w-[1280px] items-center justify-between px-5 sm:h-[76px] lg:px-8">
                 <Link href="/" className="group flex w-[55%] items-center sm:w-[45%] xl:w-auto" aria-label="Learn2Earn">
                   <motion.div
@@ -110,19 +109,13 @@ export function LandingHeader() {
                             type="button"
                             onClick={() => isHome && document.getElementById('courses')?.scrollIntoView({ behavior: 'smooth' })}
                             className={cn(
-                              'nav-link inline-flex items-center gap-1 rounded-[11px] px-4 py-2 font-medium transition-colors duration-200',
+                              'relative px-3.5 py-2 rounded-lg text-sm font-medium transition-colors duration-200 inline-flex items-center gap-1',
                               isActive ? 'text-[#F47B20]' : 'text-[#1A1A1A] hover:text-[#F47B20]',
                             )}
                             aria-expanded={coursesDropdownOpen}
                             aria-haspopup="menu"
                           >
-                            {isActive && (
-                              <motion.span
-                                layoutId="landing-nav-active-pill"
-                                className="nav-link-pill"
-                                transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                              />
-                            )}
+                            {isActive && <span className="absolute left-3 right-3 bottom-1 h-0.5 rounded-full bg-gradient-to-r from-[#F47B20] to-[#6D3DF5]" />}
                             {link.label}
                             <ChevronDown className={cn('w-3.5 h-3.5 transition-transform duration-200', coursesDropdownOpen && 'rotate-180')} />
                           </button>
@@ -136,13 +129,13 @@ export function LandingHeader() {
                                 className="absolute left-1/2 top-full w-56 -translate-x-1/2 pt-3"
                                 role="menu"
                               >
-                                <div className="overflow-hidden rounded-2xl border border-[#F0EAE0] bg-white/95 p-2 shadow-[0_18px_40px_-18px_rgba(31,45,61,0.35)] backdrop-blur-xl">
+                                <div className="overflow-hidden rounded-xl border border-[#E9E7F5] bg-white p-2 shadow-sm">
                                   {navCoursesDropdownItems.map((item) => (
                                     <Link
                                       key={item.label}
                                       href="/#courses"
                                       onClick={() => setCoursesDropdownOpen(false)}
-                                      className="group/item flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[#FDF0E5]"
+                                      className="group/item flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-[#FDF0E5]"
                                       role="menuitem"
                                     >
                                       <span className={cn('h-2 w-2 shrink-0 rounded-full', item.color)} />
@@ -164,17 +157,11 @@ export function LandingHeader() {
                         href={resolveHref(link.href)}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
-                          'nav-link rounded-[11px] px-4 py-2 font-medium transition-colors duration-200',
+                          'relative px-3.5 py-2 rounded-lg text-sm font-medium transition-colors duration-200',
                           isActive ? 'text-[#F47B20]' : 'text-[#1A1A1A] hover:text-[#F47B20]',
                         )}
                       >
-                        {isActive && (
-                          <motion.span
-                            layoutId="landing-nav-active-pill"
-                            className="nav-link-pill"
-                            transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                          />
-                        )}
+                        {isActive && <span className="absolute left-3 right-3 bottom-1 h-0.5 rounded-full bg-gradient-to-r from-[#F47B20] to-[#6D3DF5]" />}
                         {link.label}
                       </Link>
                     )
@@ -224,7 +211,7 @@ export function LandingHeader() {
               transition={{ duration: 0.25, ease: 'easeOut' }}
               className="px-4 sm:px-6 xl:hidden"
             >
-              <div className="nav-shell mt-1 max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain rounded-3xl border border-[#F0EAE0] px-4 py-4 shadow-[0_10px_24px_-20px_rgba(31,45,61,0.35)]">
+              <div className="mt-1 max-h-[calc(100dvh-110px)] overflow-y-auto overscroll-contain rounded-xl border border-[#E9E7F5] bg-white px-4 py-4 shadow-sm">
                 <div className="space-y-1">
                   {navLinks.map((link) => {
                     const isAnchor = link.href.startsWith('#')
@@ -319,89 +306,13 @@ export function LandingHeader() {
       </motion.nav>
 
       <style jsx global>{`
-        .nav-aurora {
+        .nav-shell-simple {
           position: relative;
-          border-radius: 0;
-          padding: 1.5px;
-          background: linear-gradient(115deg, #F47B20, #FFC08A, #6D3DF5, #34D399, #3478F6, #F47B20);
-          background-size: 300% 300%;
-          animation: nav-aurora 8s ease infinite;
-          box-shadow: 0 10px 26px -20px rgba(31, 45, 61, 0.28), 0 2px 8px -6px rgba(109, 61, 245, 0.16);
-          transition: box-shadow 0.4s ease, border-radius 0.4s ease;
-        }
-        .nav-aurora.is-scrolled {
-          border-radius: 0;
-          box-shadow: 0 8px 20px -18px rgba(31, 45, 61, 0.32), 0 2px 8px -6px rgba(244, 123, 32, 0.18);
-        }
-        @keyframes nav-aurora {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .nav-shell {
-          position: relative;
-          border-radius: 0;
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 253, 249, 0.88));
-          backdrop-filter: blur(18px) saturate(170%);
-          -webkit-backdrop-filter: blur(18px) saturate(170%);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
-          overflow: visible;
+          background: transparent;
           font-family: 'Mona Sans', sans-serif;
-        }
-        .nav-shine {
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          overflow: hidden;
-          pointer-events: none;
-        }
-        .nav-shine::after {
-          content: '';
-          position: absolute;
-          top: -30%;
-          bottom: -30%;
-          left: 0;
-          width: 34%;
-          background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.65), transparent);
-          transform: translateX(-180%) skewX(-18deg);
-          animation: nav-shine 6s ease-in-out infinite;
-        }
-        @keyframes nav-shine {
-          0% { transform: translateX(-180%) skewX(-18deg); }
-          55%, 100% { transform: translateX(420%) skewX(-18deg); }
-        }
-        .nav-link {
-          position: relative;
-          z-index: 1;
-          isolation: isolate;
-          font-family: 'Mona Sans', sans-serif;
-          font-size: 14px;
-        }
-        .nav-link::after {
-          content: '';
-          position: absolute;
-          left: 14px;
-          right: 14px;
-          bottom: 5px;
-          height: 2px;
-          border-radius: 999px;
-          background: linear-gradient(90deg, #F47B20, #6D3DF5);
-          transform: scaleX(0);
-          transform-origin: left center;
-          transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-          pointer-events: none;
-        }
-        .nav-link:hover::after,
-        .nav-link[aria-expanded='true']::after {
-          transform: scaleX(1);
         }
         .nav-link-pill {
-          position: absolute;
-          inset: 0;
-          border-radius: 11px;
-          background: linear-gradient(120deg, rgba(244, 123, 32, 0.14), rgba(109, 61, 245, 0.14));
-          border: 1px solid rgba(244, 123, 32, 0.22);
-          z-index: -1;
+          display: none;
         }
         .nav-cta {
           position: relative;
@@ -416,9 +327,6 @@ export function LandingHeader() {
           transition: transform 0.7s ease;
         }
         .nav-cta:hover::after { transform: translateX(160%) skewX(-18deg); }
-        @media (prefers-reduced-motion: reduce) {
-          .nav-aurora, .nav-shine::after, .nav-cta::after { animation: none !important; }
-        }
       `}</style>
     </>
   )

@@ -644,6 +644,100 @@
   z-index: 1;
 }
 
+/* ==========================================================================
+   Landing page — large screen responsive system (1440px / 1600px containers,
+   fluid clamp() sizing, auto-fit card grids, 1920px / 2100px / 2560px scales)
+
+   These rules are intentionally declared OUTSIDE @layer so they win over the
+   Tailwind utilities used in LandingPage.tsx without `!important`.
+   ========================================================================== */
+
+/* 1 — Centered content container. Section backgrounds (hero, gradients,
+      footer) stay full width; only the inner content is constrained. */
+.landing-container {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: clamp(24px, 3vw, 48px);
+}
+@media (min-width: 2100px) {
+  .landing-container {
+    max-width: 1600px;
+  }
+}
+
+/* 2 — Never allow a horizontal scrollbar at any width */
+html,
+body {
+  overflow-x: clip;
+}
+.landing-page-root {
+  overflow-x: clip;
+}
+
+/* 3 — Images never overflow their container */
+.landing-container img,
+.landing-container video,
+.landing-page-root > img,
+.landing-page-root img {
+  max-width: 100%;
+}
+
+/* 4 — Fluid section headings: anchored to the current 1024px size (36px)
+      and grown with the viewport, capped for ultra-wide screens. */
+@media (min-width: 1024px) {
+  .landing-h2 {
+    font-size: clamp(36px, 0.9vw + 26.8px, 48px);
+  }
+}
+
+/* 5 — Fluid section rhythm — vertical padding scales up on large screens */
+@media (min-width: 1920px) {
+  .landing-section {
+    padding-block: clamp(6.5rem, 6vw, 9rem);
+  }
+  .landing-footer {
+    padding-block: clamp(5.5rem, 5vw, 8rem);
+  }
+  .landing-navbar {
+    height: 84px;
+  }
+}
+@media (min-width: 2100px) {
+  .landing-section {
+    padding-block: clamp(7rem, 6vw, 9.5rem);
+  }
+}
+
+/* 6 — Card grids: the Tailwind column utilities keep the exact designed
+      breakpoints below 1920px. From 1920px up the grid switches to
+      auto-fit + minmax so an extra column can appear on wide screens
+      instead of the cards stretching. minmax(min(100%, Npx)) keeps the
+      rule safe on narrow viewports. */
+.landing-grid-cards,
+.landing-grid-mentors,
+.landing-grid-pricing {
+  display: grid;
+}
+@media (min-width: 1920px) {
+  /* Courses sit next to a 260px filter sidebar — 3-up until the catalog
+     column has room for a 4th card (≈2100px+). */
+  .landing-grid-cards {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  }
+  /* Mentors live in a narrower side column — 320px min keeps the designed
+     2-up row (a 3rd card would orphan, and the column is too narrow for
+     a comfortable 4-up). */
+  .landing-grid-mentors {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  }
+  /* Pricing is capped at 1160px, so auto-fit holds the 3-up layout
+     instead of letting cards stretch. */
+  .landing-grid-pricing {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .auth-shell *,
   .auth-shell *::before,

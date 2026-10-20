@@ -1858,7 +1858,7 @@ export function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white text-brand-600 font-inter">
+    <div className="landing-page-root min-h-screen bg-white text-brand-600 font-inter">
       {/* Navbar */}
       <motion.nav
         initial={{ y: -120, opacity: 0 }}
@@ -1871,7 +1871,7 @@ export function LandingPage() {
           <div className={cn('nav-aurora', scrolled && 'is-scrolled')}>
             <div className="nav-shell">
               <span className="nav-shine" aria-hidden="true" />
-              <div className="relative mx-auto flex w-full max-w-[1280px] items-center justify-between h-[68px] sm:h-[76px] px-5 lg:px-8">
+              <div className="landing-container landing-navbar relative mx-auto flex w-full items-center justify-between h-[68px] sm:h-[76px]">
                 {/* Logo */}
                 <Link href="/" className="flex items-center group w-[55%] sm:w-[45%] xl:w-auto" aria-label="Learn2Earn">
                   <motion.div
@@ -2132,7 +2132,7 @@ export function LandingPage() {
 
       {/* Hero Section */}
       <section id="home" className="hero relative overflow-hidden">
-        <Container size="xl" className="hero-container relative">
+        <Container size="landing" className="hero-container relative">
           <div className="hero-grid">
             {/* Left - Text column */}
             <motion.div
@@ -2298,21 +2298,10 @@ export function LandingPage() {
         .nav-aurora {
           position: relative;
           border-radius: 0;
-          padding: 1.5px;
-          background: linear-gradient(115deg, #F47B20, #FFC08A, #6D3DF5, #34D399, #3478F6, #F47B20);
-          background-size: 300% 300%;
-          animation: nav-aurora 8s ease infinite;
-          box-shadow: 0 10px 26px -20px rgba(31, 45, 61, 0.28), 0 2px 8px -6px rgba(109, 61, 245, 0.16);
-          transition: box-shadow 0.4s ease, border-radius 0.4s ease;
+          padding: 0;
         }
         .nav-aurora.is-scrolled {
           border-radius: 0;
-          box-shadow: 0 8px 20px -18px rgba(31, 45, 61, 0.32), 0 2px 8px -6px rgba(244, 123, 32, 0.18);
-        }
-        @keyframes nav-aurora {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
         }
         .nav-shell {
           position: relative;
@@ -2405,7 +2394,7 @@ export function LandingPage() {
           background: var(--bg);
           color: var(--heading);
           font-family: var(--font-mona), sans-serif;
-          padding: 140px 0 120px;
+          padding: clamp(140px, 9vw, 200px) 0 clamp(120px, 7vw, 170px);
         }
         .hero-container {
           padding-top: 0;
@@ -2424,7 +2413,7 @@ export function LandingPage() {
           .hero-grid { grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); gap: 16px; }
         }
         @media (min-width: 1920px) {
-          .hero-grid { gap: 72px; }
+          .hero-grid { grid-template-columns: minmax(0, 50fr) minmax(0, 50fr); gap: clamp(48px, 4vw, 88px); }
         }
 
         /* decorative background */
@@ -2439,7 +2428,7 @@ export function LandingPage() {
         .hero-decor-dot-2 { width: 10px; height: 10px; left: 11%; bottom: 17%; background: rgba(11,59,46,0.10); }
 
         /* left column */
-        .hero-text-col { width: 100%; max-width: 560px; margin-inline: auto; text-align: center; }
+        .hero-text-col { width: 100%; max-width: clamp(560px, 40vw, 780px); margin-inline: auto; text-align: center; }
         @media (min-width: 1024px) {
           .hero-text-col { margin-inline: 0; text-align: left; }
         }
@@ -2479,7 +2468,7 @@ export function LandingPage() {
           color: #E8630A; font-size: 1.1em; line-height: 1.1;
         }
         @media (min-width: 640px) { .hero-title { font-size: 40px; } }
-        @media (min-width: 1024px) { .hero-title { font-size: 55px; } }
+        @media (min-width: 1024px) { .hero-title { font-size: clamp(55px, 1.1vw + 42.2px, 68px); } }
 
         /* paragraph */
         .hero-sub {
@@ -2487,14 +2476,14 @@ export function LandingPage() {
           color: var(--text-muted); margin: 0 0 26px; max-width: 470px;
           margin-inline: auto;
         }
-        @media (min-width: 1024px) { .hero-sub { margin-inline: 0; } }
+        @media (min-width: 1024px) { .hero-sub { margin-inline: 0; font-size: clamp(16px, 0.55rem + 0.7vw, 21px); } }
 
         /* search bar */
         .hero-search {
           position: relative; display: flex; align-items: center;
           background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
           box-shadow: 0 16px 38px -24px rgba(11,59,46,0.5);
-          max-width: 520px; margin-inline: auto; margin-bottom: 16px;
+          max-width: clamp(520px, 26vw, 660px); margin-inline: auto; margin-bottom: 16px;
         }
         @media (min-width: 1024px) { .hero-search { margin-inline: 0; } }
         .hero-search-icon {
@@ -2679,7 +2668,7 @@ export function LandingPage() {
 
 
       {/* Courses Built For Careers — Curated Catalog */}
-      <section id="courses" className="py-12 sm:py-16 lg:py-24 relative overflow-hidden" style={{ backgroundColor: '#FAF8F4', fontFamily: "var(--font-mona)" }}>
+      <section id="courses" className="landing-section py-12 sm:py-16 lg:py-24 relative overflow-hidden" style={{ backgroundColor: '#FAF8F4', fontFamily: "var(--font-mona)" }}>
         {/* Soft decorative glows */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
           <div className="absolute -top-16 -right-16 w-[260px] h-[260px] rounded-full bg-[#7C3AED]/10 blur-3xl sm:-top-24 sm:-right-24 sm:w-[420px] sm:h-[420px]" />
@@ -2687,7 +2676,7 @@ export function LandingPage() {
           <div className="absolute -bottom-20 left-1/2 w-[280px] h-[240px] rounded-full bg-[#1F4D3A]/10 blur-3xl sm:-bottom-28 sm:w-[460px] sm:h-[380px]" />
         </div>
 
-        <Container size="xl" className="relative">
+        <Container size="landing" className="relative">
           {/* Section header */}
           <motion.div
             initial="hidden"
@@ -2702,7 +2691,7 @@ export function LandingPage() {
                 <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1F4D3A] sm:text-[11px] sm:tracking-[0.18em]">Courses</span>
               </span>
             </motion.div>
-            <motion.h2 variants={fadeUp} className="text-[27px] sm:text-[32px] lg:text-[36px] font-semibold tracking-tight leading-[1.12] text-[#1F4D3A] break-words">
+            <motion.h2 variants={fadeUp} className="landing-h2 text-[27px] sm:text-[32px] lg:text-[36px] font-semibold tracking-tight leading-[1.12] text-[#1F4D3A] break-words">
               Courses Built For Careers
             </motion.h2>
             <motion.p variants={fadeUp} className="text-[13px] sm:text-[14px] lg:text-[15px] text-[#5A6B63] leading-relaxed mt-3 mx-auto max-w-xl">
@@ -2860,7 +2849,7 @@ export function LandingPage() {
 
           {/* Course Grid — grid view */}
           {viewMode === 'grid' ? (
-          <motion.div layout className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3 xl:gap-5">
+          <motion.div layout className="landing-grid-cards grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3 xl:gap-5">
             {paginatedCourses.map((course, idx) => {
               const hasDiscount = Number(course.originalPrice) > Number(course.price) && Number(course.originalPrice) > 0
               const savings = hasDiscount ? Math.round((1 - course.price / course.originalPrice) * 100) : 0
@@ -2906,7 +2895,7 @@ export function LandingPage() {
                         src={course.image}
                         alt={course.title}
                         fill
-                        sizes="(max-width: 639px) 100vw, (max-width: 1279px) 50vw, 33vw"
+                        sizes="(max-width: 639px) 100vw, (max-width: 1279px) 50vw, (max-width: 2099px) 33vw, 25vw"
                         className="relative object-cover grayscale-[45%] transition-[transform,filter] duration-700 ease-out group-hover/card:scale-[1.16] group-hover/card:grayscale-0"
                       />
                     </motion.div>
@@ -3204,7 +3193,7 @@ export function LandingPage() {
         id="how-it-works"
         onMouseMove={handleSectionMouseMove}
         onMouseLeave={resetSectionParallax}
-        className="relative py-12 sm:py-16 lg:py-24 overflow-hidden"
+        className="landing-section relative py-12 sm:py-16 lg:py-24 overflow-hidden"
         style={{ fontFamily: 'var(--font-mona), ui-sans-serif, system-ui, sans-serif' }}
       >
         {/* Soft off-white gradient background */}
@@ -3226,12 +3215,12 @@ export function LandingPage() {
           <div className="sl-blob-b h-full w-full bg-[#DFF3E6]/90" />
         </div>
 
-        <Container size="xl" className="relative">
+        <Container size="landing" className="relative">
           <div className="grid grid-cols-1 gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-16 3xl:gap-24 items-center">
             {/* Left: copy + illustration */}
             <div className="relative">
               {/* Heading — words rise and unblur one by one */}
-              <h2 className="max-w-full break-words text-[27px] sm:text-[34px] lg:text-[36px] font-bold leading-[1.15] tracking-tight" style={{ fontFamily: 'var(--font-mona), sans-serif' }}>
+              <h2 className="landing-h2 max-w-full break-words text-[27px] sm:text-[34px] lg:text-[36px] font-bold leading-[1.15] tracking-tight" style={{ fontFamily: 'var(--font-mona), sans-serif' }}>
                 <span className="block text-[#0B5D4B]">
                   {startLearningLine1.map((w, i) => (
                     <motion.span
@@ -3490,12 +3479,12 @@ export function LandingPage() {
       </section>
 
       {/* SECTION: Expert Instructors - Meet Our World-Class Experts */}
-      <section id="instructors" className="relative overflow-hidden bg-[#F8F5F2] py-16 sm:py-20 lg:py-24">
+      <section id="instructors" className="landing-section relative overflow-hidden bg-[#F8F5F2] py-16 sm:py-20 lg:py-24">
         {/* Soft cream ambience */}
         <div aria-hidden="true" className="pointer-events-none absolute -top-28 -right-24 w-[380px] h-[380px] rounded-full bg-white blur-3xl opacity-70" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-24 w-[380px] h-[380px] rounded-full bg-white blur-3xl opacity-70" />
 
-        <Container size="xl" className="relative">
+        <Container size="landing" className="relative">
           <div className="grid grid-cols-1 items-center gap-8 sm:gap-10 lg:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.55fr)] lg:gap-14 3xl:gap-24">
             {/* Left column — copy */}
             <motion.div
@@ -3516,7 +3505,7 @@ export function LandingPage() {
               {/* Heading */}
               <motion.h2
                 variants={fadeUp}
-                className="mt-5 text-[30px] sm:text-[36px] font-medium leading-[1.1] tracking-tight text-[#1A453B]"
+                className="landing-h2 mt-5 text-[30px] sm:text-[36px] font-medium leading-[1.1] tracking-tight text-[#1A453B]"
               >
                 Meet our world-class
                 <span className="block">
@@ -3542,7 +3531,7 @@ export function LandingPage() {
             </motion.div>
 
             {/* Right column — expert grid */}
-            <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
+            <div className="landing-grid-mentors grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
               {expertInstructors.slice(0, 4).map((expert) => (
                 <motion.div
                   key={expert.id}
@@ -3603,8 +3592,8 @@ export function LandingPage() {
       </section>
 
       {/* SECTION 3: Choose Your Learning Plan — Pricing */}
-      <section id="pricing" className="relative overflow-hidden bg-[#F8F5F0] py-16 sm:py-20 lg:py-24" style={{ fontFamily: 'var(--font-mona), sans-serif' }}>
-        <Container size="xl" className="relative">
+      <section id="pricing" className="landing-section relative overflow-hidden bg-[#F8F5F0] py-16 sm:py-20 lg:py-24" style={{ fontFamily: 'var(--font-mona), sans-serif' }}>
+        <Container size="landing" className="relative">
 
           {/* Header */}
           <div className="mx-auto mb-10 max-w-[720px] text-center sm:mb-12 lg:mb-14">
@@ -3624,7 +3613,7 @@ export function LandingPage() {
               whileInView={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
               viewport={{ once: true, margin: '-80px' }}
               transition={{ duration: 0.55, delay: prefersReducedMotion ? 0 : 0.05, ease: 'easeOut' }}
-              className="mt-5 text-[30px] sm:text-[36px] font-bold tracking-tight leading-[1.08] text-[#1F4D3A]"
+              className="landing-h2 mt-5 text-[30px] sm:text-[36px] font-bold tracking-tight leading-[1.08] text-[#1F4D3A]"
             >
               Choose Your Learning Plan
             </motion.h2>
@@ -3688,7 +3677,7 @@ export function LandingPage() {
           </div>
 
           {/* Pricing cards */}
-          <div className="mx-auto mt-2 grid max-w-lg grid-cols-1 items-stretch gap-5 sm:max-w-2xl sm:gap-7 md:grid-cols-2 lg:max-w-[1160px] lg:grid-cols-3 lg:gap-8 3xl:gap-12">
+          <div className="landing-grid-pricing mx-auto mt-2 grid max-w-lg grid-cols-1 items-stretch gap-5 sm:max-w-2xl sm:gap-7 md:grid-cols-2 lg:max-w-[1160px] lg:grid-cols-3 lg:gap-8 3xl:gap-12">
             {pricingPlans.map((plan, idx) => {
               const isPro = plan.key === 'pro'
               const amount = billing === 'annual' ? plan.priceAnnual : plan.priceMonthly
@@ -3828,7 +3817,7 @@ export function LandingPage() {
 {/* SECTION: Turn Your Skills Into Income */}
       <section
         id="earn-with-your-skills"
-        className="relative overflow-hidden py-16 sm:py-20 lg:py-24"
+        className="landing-section relative overflow-hidden py-16 sm:py-20 lg:py-24"
         style={{ fontFamily: 'var(--font-mona), sans-serif' }}
       >
         {/* Soft warm cream background */}
@@ -3838,7 +3827,7 @@ export function LandingPage() {
           <div className="absolute -bottom-32 left-1/3 w-[440px] h-[440px] rounded-full bg-[#E3EFFF] blur-3xl opacity-50" />
         </div>
 
-        <Container size="xl" className="relative">
+        <Container size="landing" className="relative">
           {/* Centered header: full width, one-line sub-heading */}
           <motion.div
             initial={prefersReducedMotion ? false : 'hidden'}
@@ -3859,7 +3848,7 @@ export function LandingPage() {
             </motion.div>
             <motion.h2
               variants={earnWordContainer}
-              className="text-[28px] lg:text-[36px] font-bold text-[#1F4D3A] tracking-tight leading-[1.15]"
+              className="landing-h2 text-[28px] lg:text-[36px] font-bold text-[#1F4D3A] tracking-tight leading-[1.15]"
             >
               <motion.span variants={earnWord} className="inline-block">Turn</motion.span>
               <motion.span variants={earnWord} className="ml-[0.18em] inline-block sm:ml-[0.24em]">Your</motion.span>
@@ -4021,7 +4010,7 @@ export function LandingPage() {
       </section>
 
 {/* SECTION: What Our Learners Say */}
-      <section id="testimonials" className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
+      <section id="testimonials" className="landing-section relative overflow-hidden py-16 sm:py-20 lg:py-24">
         {/* Warm cream background */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#FFFFFF] via-[#FCFAF6] to-[#F8F5F0]" />
         {/* Soft warm-tone gradient blobs */}
@@ -4031,7 +4020,7 @@ export function LandingPage() {
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[460px] h-[320px] rounded-full bg-[#FDEEDF] blur-3xl opacity-50" />
         </div>
 
-        <Container size="xl" className="relative">
+        <Container size="landing" className="relative">
           {/* Header */}
           <motion.div
             initial={prefersReducedMotion ? false : 'hidden'}
@@ -4040,7 +4029,7 @@ export function LandingPage() {
             variants={staggerContainer}
             className="text-center max-w-[720px] mx-auto"
           >
-            <motion.h2 variants={prefersReducedMotion ? undefined : testimonialHeading} className="text-[28px] lg:text-[36px] font-bold text-[#1F4D3A] tracking-tight leading-[1.2]" style={{ fontFamily: "'Mona Sans', sans-serif" }}>
+            <motion.h2 variants={prefersReducedMotion ? undefined : testimonialHeading} className="landing-h2 text-[28px] lg:text-[36px] font-bold text-[#1F4D3A] tracking-tight leading-[1.2]" style={{ fontFamily: "'Mona Sans', sans-serif" }}>
               What Our Learners Say
             </motion.h2>
             <motion.p variants={fadeUp} className="mt-4 text-sm text-[#6B7280] leading-relaxed mx-auto" style={{ fontFamily: "'Mona Sans', sans-serif" }}>
@@ -4352,7 +4341,7 @@ export function LandingPage() {
         {/* subtle dot grid texture */}
         <div className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:radial-gradient(#B8C9C0_1px,transparent_1px)] [background-size:22px_22px]" />
 
-        <Container size="xl" className="relative py-16 lg:py-20">
+        <Container size="landing" className="landing-footer relative py-16 lg:py-20">
           {/* Top CTA Banner */}
           <motion.div
             initial="hidden"
